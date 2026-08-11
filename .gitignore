@@ -33,3 +33,5 @@ pnpm-debug.log*
 
 # Prisma
 apps/web/prisma/dev.db
+
+.claude/
