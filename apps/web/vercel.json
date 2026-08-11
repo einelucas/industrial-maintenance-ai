@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generate-preventive-work-orders",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

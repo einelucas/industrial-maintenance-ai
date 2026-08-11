@@ -1,0 +1,35 @@
+# Node
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# ML artifacts (keep metadata, ignore large binaries if desired)
+services/predictive-ai/models/*.joblib
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma
+apps/web/prisma/dev.db

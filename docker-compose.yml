@@ -1,0 +1,38 @@
+# Docker Compose para desenvolvimento local.
+#
+# O banco de dados principal é o Neon (Postgres serverless na nuvem) — configurado
+# via DATABASE_URL/DIRECT_URL em apps/web/.env. Por isso o serviço "postgres" abaixo
+# é OPCIONAL: só é necessário se você preferir rodar um Postgres local em vez do Neon
+# (por exemplo, para testes offline). Para usar Neon, basta não subir esse serviço.
+#
+# O Next.js roda fora do Docker durante o desenvolvimento (pnpm dev), conforme
+# especificado no escopo do projeto.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pcm-postgres-local
+    profiles: ["local-db"] # só sobe com: docker compose --profile local-db up
+    environment:
+      POSTGRES_USER: pcm
+      POSTGRES_PASSWORD: pcm
+      POSTGRES_DB: pcm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pcm_postgres_data:/var/lib/postgresql/data
+
+  predictive-ai:
+    build:
+      context: ./services/predictive-ai
+      dockerfile: Dockerfile
+    container_name: pcm-predictive-ai
+    env_file:
+      - ./services/predictive-ai/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/predictive-ai/models:/app/models
+
+volumes:
+  pcm_postgres_data:

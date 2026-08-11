@@ -1,0 +1,450 @@
+// Schema Prisma — Industrial Maintenance Intelligence (PCM)
+// Banco: PostgreSQL (Neon). DATABASE_URL = pooled connection (runtime),
+// DIRECT_URL = direct connection (usada apenas por `prisma migrate`).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  PLANNER
+  TECHNICIAN
+  MANAGER
+}
+
+enum EquipmentCriticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  MAINTENANCE
+  STOPPED
+  INACTIVE
+}
+
+enum WorkOrderType {
+  CORRECTIVE
+  PREVENTIVE
+  PREDICTIVE
+  INSPECTION
+  IMPROVEMENT
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderStatus {
+  OPEN
+  PLANNED
+  IN_PROGRESS
+  WAITING_MATERIAL
+  PAUSED
+  COMPLETED
+  CANCELED
+}
+
+enum FrequencyType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+  CUSTOM_DAYS
+}
+
+enum SensorSource {
+  MANUAL
+  CSV
+  SIMULATOR
+  SENSOR
+}
+
+enum RiskLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum AlertType {
+  PREDICTIVE_RISK
+  THRESHOLD_BREACH
+}
+
+enum AlertSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+// ---------------------------------------------------------------------------
+// USUÁRIOS E AUTENTICAÇÃO (Auth.js / Credentials)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          UserRole
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  createdWorkOrders     WorkOrder[]        @relation("WorkOrderCreatedBy")
+  assignedWorkOrders    WorkOrder[]        @relation("WorkOrderAssignedTo")
+  workOrderHistories    WorkOrderHistory[]
+  defaultForPlans       MaintenancePlan[]  @relation("PlanDefaultAssignee")
+  acknowledgedAlerts    Alert[]            @relation("AlertAcknowledgedBy")
+  auditLogs             AuditLog[]
+  createdFailureEvents  FailureEvent[]
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// SETORES E EQUIPAMENTOS
+// ---------------------------------------------------------------------------
+
+model Sector {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  equipments Equipment[]
+
+  @@map("sectors")
+}
+
+model Equipment {
+  id                String               @id @default(uuid())
+  tag               String               @unique
+  name              String
+  description       String?
+  category          String
+  manufacturer      String?
+  model             String?
+  serialNumber      String?
+  location          String?
+  criticality       EquipmentCriticality @default(MEDIUM)
+  status            EquipmentStatus      @default(OPERATIONAL)
+  installationDate  DateTime?
+  sectorId          String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  sector            Sector             @relation(fields: [sectorId], references: [id])
+  workOrders        WorkOrder[]
+  maintenancePlans  MaintenancePlan[]
+  sensorReadings    SensorReading[]
+  predictions       Prediction[]
+  alerts            Alert[]
+  failureEvents     FailureEvent[]
+
+  @@index([sectorId])
+  @@map("equipments")
+}
+
+// ---------------------------------------------------------------------------
+// ORDENS DE SERVIÇO
+// ---------------------------------------------------------------------------
+
+model WorkOrder {
+  id               String            @id @default(uuid())
+  number           String            @unique // numeração amigável, ex: OS-2026-0001
+  title            String
+  description      String?
+  type             WorkOrderType
+  priority         WorkOrderPriority @default(MEDIUM)
+  status           WorkOrderStatus   @default(OPEN)
+
+  equipmentId      String
+  assignedUserId   String?
+  createdById      String
+
+  scheduledStart   DateTime?
+  scheduledEnd     DateTime?
+  actualStart      DateTime?
+  actualEnd        DateTime?
+
+  estimatedHours   Float?
+  actualHours      Float?
+
+  solution         String?
+  notes            String?
+
+  sourcePredictionId String? @unique
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  equipment        Equipment           @relation(fields: [equipmentId], references: [id])
+  assignedUser     User?               @relation("WorkOrderAssignedTo", fields: [assignedUserId], references: [id])
+  createdBy        User                @relation("WorkOrderCreatedBy", fields: [createdById], references: [id])
+  sourcePrediction Prediction?         @relation(fields: [sourcePredictionId], references: [id])
+  history          WorkOrderHistory[]
+  checklistItems   WorkOrderChecklistItem[]
+  failureEvents    FailureEvent[]
+
+  @@index([equipmentId])
+  @@index([assignedUserId])
+  @@index([status])
+  @@map("work_orders")
+}
+
+model WorkOrderHistory {
+  id             String   @id @default(uuid())
+  workOrderId    String
+  userId         String
+  action         String
+  previousStatus WorkOrderStatus?
+  newStatus      WorkOrderStatus?
+  description    String?
+  createdAt      DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([workOrderId])
+  @@map("work_order_histories")
+}
+
+// Checklist "modelo", pertencente ao plano preventivo.
+model MaintenancePlanChecklistItem {
+  id          String   @id @default(uuid())
+  planId      String
+  description String
+  order       Int      @default(0)
+
+  plan MaintenancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("maintenance_plan_checklist_items")
+}
+
+// Cópia congelada do checklist no momento da criação da OS — preserva
+// histórico mesmo que o MaintenancePlan seja alterado depois (seção 17).
+model WorkOrderChecklistItem {
+  id          String   @id @default(uuid())
+  workOrderId String
+  description String
+  order       Int      @default(0)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("work_order_checklist_items")
+}
+
+// ---------------------------------------------------------------------------
+// PLANOS PREVENTIVOS
+// ---------------------------------------------------------------------------
+
+model MaintenancePlan {
+  id                 String        @id @default(uuid())
+  name               String
+  description        String?
+  equipmentId        String
+  frequencyType      FrequencyType
+  frequencyValue     Int           @default(1)
+  nextExecution      DateTime
+  estimatedHours     Float?
+  defaultAssigneeId  String?
+  active             Boolean       @default(true)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  equipment        Equipment                       @relation(fields: [equipmentId], references: [id])
+  defaultAssignee  User?                            @relation("PlanDefaultAssignee", fields: [defaultAssigneeId], references: [id])
+  checklistItems   MaintenancePlanChecklistItem[]
+
+  @@index([equipmentId])
+  @@map("maintenance_plans")
+}
+
+// ---------------------------------------------------------------------------
+// LEITURAS DE SENSOR / MEDIÇÕES
+// ---------------------------------------------------------------------------
+
+model SensorReading {
+  id            String       @id @default(uuid())
+  equipmentId   String
+
+  temperature   Float?
+  vibration     Float?
+  pressure      Float?
+  rpm           Float?
+  current       Float?
+  torque        Float?
+  operatingHours Float?
+
+  // Campos esperados pelo serviço de IA (app/schemas/prediction_input.py) e
+  // pelo dataset AI4I 2020 usado no treino — antes só existiam no FastAPI.
+  airTemperature    Float?
+  processTemperature Float?
+  toolWear          Float?
+  rotationalSpeed   Float?
+
+  measuredAt    DateTime     @default(now())
+  source        SensorSource @default(MANUAL)
+
+  createdAt     DateTime     @default(now())
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@index([equipmentId])
+  @@index([measuredAt])
+  @@map("sensor_readings")
+}
+
+// ---------------------------------------------------------------------------
+// PREDICTION (histórico temporal — nunca sobrescrita)
+// ---------------------------------------------------------------------------
+
+model Prediction {
+  id                 String    @id @default(uuid())
+  equipmentId        String
+
+  failureProbability Float
+  riskLevel          RiskLevel
+  predictedClass     Int
+
+  modelVersion       String
+
+  inputSnapshot      Json
+  featuresUsed       Json
+
+  createdAt          DateTime  @default(now())
+
+  equipment  Equipment  @relation(fields: [equipmentId], references: [id])
+  alert      Alert?
+  workOrder  WorkOrder?
+
+  @@index([equipmentId])
+  @@index([createdAt])
+  @@map("predictions")
+}
+
+// ---------------------------------------------------------------------------
+// ALERT
+// ---------------------------------------------------------------------------
+
+model Alert {
+  id            String        @id @default(uuid())
+  equipmentId   String
+  predictionId  String        @unique
+
+  type          AlertType     @default(PREDICTIVE_RISK)
+  severity      AlertSeverity
+  status        AlertStatus   @default(OPEN)
+
+  title         String
+  description   String?
+
+  acknowledgedById String?
+  acknowledgedAt   DateTime?
+
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+
+  equipment      Equipment   @relation(fields: [equipmentId], references: [id])
+  prediction     Prediction  @relation(fields: [predictionId], references: [id])
+  acknowledgedBy User?       @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+
+  @@index([equipmentId])
+  @@index([status])
+  @@map("alerts")
+}
+
+// ---------------------------------------------------------------------------
+// CONFIGURAÇÕES (faixas de risco configuráveis via UI)
+// ---------------------------------------------------------------------------
+
+// Linha única (id fixo "default") com os cortes de probabilidade que
+// classificam o risco em LOW/MODERATE/HIGH/CRITICAL — enviados ao FastAPI
+// a cada chamada de /predict em vez de hardcoded (seção 23 do escopo).
+model RiskThresholdConfig {
+  id          String   @id @default("default")
+  lowMax      Float    @default(0.30)
+  moderateMax Float    @default(0.60)
+  highMax     Float    @default(0.80)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  @@map("risk_threshold_configs")
+}
+
+// ---------------------------------------------------------------------------
+// FAILURE EVENT (captura de falhas reais — base para retreino futuro do
+// modelo com dados de produção, diferente de Prediction, que é a estimativa
+// da IA)
+// ---------------------------------------------------------------------------
+
+model FailureEvent {
+  id          String   @id @default(uuid())
+  equipmentId String
+  occurredAt  DateTime
+  description String?
+  workOrderId String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  equipment Equipment  @relation(fields: [equipmentId], references: [id])
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id])
+  createdBy User       @relation(fields: [createdById], references: [id])
+
+  @@index([equipmentId])
+  @@index([occurredAt])
+  @@map("failure_events")
+}
+
+// ---------------------------------------------------------------------------
+// AUDITORIA
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  entity    String
+  entityId  String
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
