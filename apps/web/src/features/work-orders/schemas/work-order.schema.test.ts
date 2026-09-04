@@ -87,3 +87,40 @@ describe("createWorkOrderSchema", () => {
     }
   });
 });
+
+describe("createWorkOrderSchema — bloqueio de atalho preditivo (AI-first / Etapa 3)", () => {
+  const validBase = {
+    title: "Verificar vibração anormal",
+    type: "CORRECTIVE",
+    priority: "HIGH",
+    equipmentId: "123e4567-e89b-12d3-a456-426614174000",
+  };
+
+  it('rejeita type "PREDICTIVE" no formulário genérico de criação de OS', () => {
+    const result = createWorkOrderSchema.safeParse({ ...validBase, type: "PREDICTIVE" });
+    expect(result.success).toBe(false);
+  });
+
+  it("aceita os quatro tipos não preditivos normalmente", () => {
+    for (const type of ["CORRECTIVE", "PREVENTIVE", "INSPECTION", "IMPROVEMENT"]) {
+      expect(createWorkOrderSchema.safeParse({ ...validBase, type }).success).toBe(true);
+    }
+  });
+
+  it("descarta sourcePredictionId mesmo se enviado — o campo não existe no schema genérico", () => {
+    const result = createWorkOrderSchema.parse({
+      ...validBase,
+      sourcePredictionId: "123e4567-e89b-12d3-a456-426614174000",
+    });
+    expect(result).not.toHaveProperty("sourcePredictionId");
+  });
+
+  it("um sourcePredictionId forjado não sobrevive à validação — o payload final nunca contém prova de proveniência de IA", () => {
+    // Mesmo que um cliente malicioso monte o payload manualmente (fora do
+    // formulário, que já nem oferece a opção), o schema não devolve nada
+    // que o service possa usar para vincular a uma Prediction.
+    const forged = { ...validBase, type: "PREDICTIVE", sourcePredictionId: "any-forged-id" };
+    const result = createWorkOrderSchema.safeParse(forged);
+    expect(result.success).toBe(false);
+  });
+});

@@ -1,0 +1,138 @@
+import { prisma } from "@/lib/db/client";
+import { thermalAiGateway } from "@/features/ai-core/services/thermal-ai-gateway.service";
+import { thermalOrchestratorService } from "@/features/ai-core/services/thermal-orchestrator.service";
+import { inferenceRequestRepository } from "@/features/ai-core/repositories/inference-request.repository";
+import { buildInferenceRequestId } from "@/features/ai-core/services/inference-request-id";
+import { THERMAL_FEATURE_VERSION } from "@/features/ai-core/temporal-features/calculate-temporal-features";
+
+// Backfill de leituras PENDING_AI (GPMS 2026 / Etapa 5) — processa em lotes
+// pequenos, nunca uma chamada simultânea por leitura (loop sequencial),
+// interrompe de imediato se a readiness da IA cair no meio da execução, e é
+// seguro de retomar (leituras já com `InferenceRequest` — de qualquer
+// resultado — nunca são reenfileiradas por esta rotina).
+//
+// IMPORTANTE: nada aqui é executado automaticamente contra o banco
+// demonstrativo nesta etapa. Enquanto não existir um modelo térmico real
+// (Etapa 8), rodar isto contra as 6.600 leituras da Etapa 2 só serve para
+// confirmar, honestamente, que o núcleo está AI_CORE_UNAVAILABLE — não deve
+// ser executado em produção/demonstração até a Etapa 8.
+
+const DEFAULT_BATCH_SIZE = 25;
+const DEFAULT_MAX_BATCHES = 4;
+
+export interface BackfillOptions {
+  batchSize?: number;
+  maxBatches?: number;
+  dryRun?: boolean;
+}
+
+export interface BackfillReport {
+  eligibleCount: number;
+  enqueuedCount: number;
+  processedCount: number;
+  succeededCount: number;
+  transientFailureCount: number;
+  failedCount: number;
+  dryRun: boolean;
+  stoppedReason?: string;
+}
+
+export const thermalBackfillService = {
+  /** Leituras PENDING_AI que nunca entraram na fila de inferência, em nenhuma versão de features. */
+  countEligible(): Promise<number> {
+    return prisma.thermalReading.count({
+      where: { analysisStatus: "PENDING_AI", inferenceRequests: { none: {} } },
+    });
+  },
+
+  async run(options: BackfillOptions = {}): Promise<BackfillReport> {
+    const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
+    const maxBatches = options.maxBatches ?? DEFAULT_MAX_BATCHES;
+    const dryRun = options.dryRun ?? false;
+
+    const eligibleCount = await this.countEligible();
+
+    if (dryRun) {
+      return { eligibleCount, enqueuedCount: 0, processedCount: 0, succeededCount: 0, transientFailureCount: 0, failedCount: 0, dryRun: true };
+    }
+
+    const readiness = await thermalAiGateway.checkReadiness();
+    if (!readiness.ready) {
+      return {
+        eligibleCount,
+        enqueuedCount: 0,
+        processedCount: 0,
+        succeededCount: 0,
+        transientFailureCount: 0,
+        failedCount: 0,
+        dryRun: false,
+        stoppedReason: `Núcleo de IA térmica indisponível — nada foi processado: ${readiness.reason ?? "motivo não informado"}.`,
+      };
+    }
+
+    let enqueuedCount = 0;
+    let processedCount = 0;
+    let succeededCount = 0;
+    let transientFailureCount = 0;
+    let failedCount = 0;
+
+    for (let batch = 0; batch < maxBatches; batch++) {
+      // Primeiro drena requisições PENDING já enfileiradas (retry de falhas
+      // transitórias de execuções anteriores) antes de enfileirar leituras novas.
+      const existingPending = await inferenceRequestRepository.findPendingBatch(batchSize);
+
+      let inferenceRequestIds: string[];
+      if (existingPending.length > 0) {
+        inferenceRequestIds = existingPending.map((r) => r.inferenceRequestId);
+      } else {
+        const newReadings = await prisma.thermalReading.findMany({
+          where: { analysisStatus: "PENDING_AI", inferenceRequests: { none: {} } },
+          orderBy: { measuredAt: "asc" },
+          take: batchSize,
+        });
+        if (newReadings.length === 0) break;
+
+        inferenceRequestIds = [];
+        for (const reading of newReadings) {
+          const inferenceRequestId = buildInferenceRequestId(reading.id, THERMAL_FEATURE_VERSION);
+          await inferenceRequestRepository.upsertPending({
+            inferenceRequestId,
+            thermalReadingId: reading.id,
+            thermalPointId: reading.thermalPointId,
+            featureVersion: THERMAL_FEATURE_VERSION,
+          });
+          enqueuedCount++;
+          inferenceRequestIds.push(inferenceRequestId);
+        }
+      }
+
+      for (const id of inferenceRequestIds) {
+        const result = await thermalOrchestratorService.processInferenceRequest(id);
+        processedCount++;
+        if (result.outcome === "SUCCEEDED") succeededCount++;
+        else if (result.outcome === "TRANSIENT_FAILURE") transientFailureCount++;
+        else if (result.outcome === "FAILED") failedCount++;
+      }
+
+      // Readiness pode cair no meio de uma execução longa — verificamos de
+      // novo entre lotes e interrompemos imediatamente.
+      if (batch < maxBatches - 1) {
+        const stillReady = await thermalAiGateway.checkReadiness();
+        if (!stillReady.ready) {
+          return {
+            eligibleCount,
+            enqueuedCount,
+            processedCount,
+            succeededCount,
+            transientFailureCount,
+            failedCount,
+            dryRun: false,
+            stoppedReason: `Núcleo de IA térmica ficou indisponível durante a execução — interrompido: ${stillReady.reason ?? "motivo não informado"}.`,
+          };
+        }
+      }
+    }
+
+    return { eligibleCount, enqueuedCount, processedCount, succeededCount, transientFailureCount, failedCount, dryRun: false };
+  },
+};

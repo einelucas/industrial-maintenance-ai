@@ -35,3 +35,6 @@ pnpm-debug.log*
 apps/web/prisma/dev.db
 
 .claude/
+
+# Playwright MCP local browser QA artifacts (snapshots/console logs)
+.playwright-mcp/

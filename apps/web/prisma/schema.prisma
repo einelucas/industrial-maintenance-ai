@@ -106,26 +106,145 @@ enum AlertStatus {
 }
 
 // ---------------------------------------------------------------------------
+// ENUMS — DOMÍNIO TERMOGRÁFICO (GPMS 2026 / Adequação Etapa 1)
+//
+// Aditivos: SensorSource/SensorReading (mecânico/AI4I) permanecem
+// inalterados e em uso pelo fluxo preditivo atual. MonitoringMode não os
+// substitui nesta etapa — é a origem das novas ThermalReading.
+// ---------------------------------------------------------------------------
+
+enum PanelType {
+  MCC
+  DISTRIBUTION
+  CONTROL
+  PROTECTION
+  OTHER
+}
+
+enum ElectricalComponentType {
+  CIRCUIT_BREAKER
+  CONTACTOR
+  THERMAL_RELAY
+  TERMINAL
+  BUSBAR
+  FUSE
+  CABLE_CONNECTION
+  POWER_SUPPLY
+  DRIVE
+  OTHER
+}
+
+enum MonitoringMode {
+  MANUAL
+  CSV
+  SIMULATOR
+  POINT_SENSOR
+  THERMAL_ARRAY
+  THERMAL_CAMERA
+}
+
+// Estado de análise da leitura pela IA (GPMS 2026 / Etapa 4) — nunca confundir
+// com risco/severidade. A ausência de `Prediction` deve sempre ser lida como
+// "pendente", nunca como "normal". `PENDING_AI` é o único estado possível no
+// momento da ingestão; os demais só existirão a partir da Etapa 5+/8, quando o
+// gateway de IA real existir.
+enum AnalysisStatus {
+  PENDING_AI // aguardando inferência do modelo real — estado padrão de toda leitura nova
+  ANALYZED // uma Prediction válida do modelo real foi produzida para esta leitura
+  AI_FAILED // a chamada ao FastAPI foi tentada e falhou — nunca vira PENDING silenciosamente
+  SUPERSEDED // leitura reprocessada por uma versão mais nova do modelo/pipeline
+}
+
+enum DeviceStatus {
+  PROVISIONING
+  ONLINE
+  OFFLINE
+  DEGRADED
+  MAINTENANCE
+  DISABLED
+}
+
+enum ModelStage {
+  RULE_ONLY
+  SYNTHETIC_EXPERIMENTAL
+  PLANT_CALIBRATION
+  PLANT_VALIDATED
+}
+
+enum IncidentStatus {
+  // Legado (Etapa 1) — nunca produzidos pelo fluxo novo da Etapa 5, mantidos
+  // apenas por compatibilidade aditiva (nenhum registro os usa hoje: 0 linhas
+  // em ThermalIncident).
+  OPEN
+  ACKNOWLEDGED
+  UNDER_ANALYSIS
+  DISMISSED
+  // Ciclo de vida real a partir da Etapa 5 — todo ThermalIncident nasce
+  // PENDING_HUMAN_REVIEW (só pode ser criado a partir de uma Prediction
+  // válida da IA) e muda de estado somente por decisão humana registrada em
+  // HumanReview.
+  PENDING_HUMAN_REVIEW
+  HUMAN_CONFIRMED
+  HUMAN_REJECTED
+  INCONCLUSIVE
+  NEW_READING_REQUIRED
+  WORK_ORDER_CREATED
+  MONITORING_AFTER_ACTION
+  NORMALIZED
+}
+
+enum HumanReviewDecision {
+  CONFIRMED
+  REJECTED
+  INCONCLUSIVE
+  NEW_READING_REQUIRED
+}
+
+enum InferenceRequestStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum ThermalCause {
+  LOOSE_CONNECTION
+  CONTACT_RESISTANCE
+  OVERLOAD
+  PHASE_IMBALANCE
+  DEGRADED_CONTACT
+  INSUFFICIENT_VENTILATION
+  THERMAL_RELAY_DEGRADATION
+  PROCESS_CONDITION
+  SENSOR_ERROR
+  NOT_CONFIRMED
+  OTHER
+}
+
+// ---------------------------------------------------------------------------
 // USUÁRIOS E AUTENTICAÇÃO (Auth.js / Credentials)
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String    @id @default(uuid())
-  name          String
-  email         String    @unique
-  passwordHash  String
-  role          UserRole
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  createdWorkOrders     WorkOrder[]        @relation("WorkOrderCreatedBy")
-  assignedWorkOrders    WorkOrder[]        @relation("WorkOrderAssignedTo")
-  workOrderHistories    WorkOrderHistory[]
-  defaultForPlans       MaintenancePlan[]  @relation("PlanDefaultAssignee")
-  acknowledgedAlerts    Alert[]            @relation("AlertAcknowledgedBy")
-  auditLogs             AuditLog[]
-  createdFailureEvents  FailureEvent[]
+  createdWorkOrders            WorkOrder[]        @relation("WorkOrderCreatedBy")
+  assignedWorkOrders           WorkOrder[]        @relation("WorkOrderAssignedTo")
+  workOrderHistories           WorkOrderHistory[]
+  defaultForPlans              MaintenancePlan[]  @relation("PlanDefaultAssignee")
+  acknowledgedAlerts           Alert[]            @relation("AlertAcknowledgedBy")
+  auditLogs                    AuditLog[]
+  createdFailureEvents         FailureEvent[]
+  acknowledgedThermalIncidents ThermalIncident[]  @relation("ThermalIncidentAcknowledgedBy")
+  // Revisão humana do defeito (GPMS 2026 / Etapa 5)
+  reviewedThermalIncidents     ThermalIncident[]  @relation("ThermalIncidentReviewedBy")
+  humanReviews                 HumanReview[]      @relation("HumanReviewReviewer")
 
   @@map("users")
 }
@@ -141,35 +260,37 @@ model Sector {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  equipments Equipment[]
+  equipments       Equipment[]
+  electricalPanels ElectricalPanel[]
 
   @@map("sectors")
 }
 
 model Equipment {
-  id                String               @id @default(uuid())
-  tag               String               @unique
-  name              String
-  description       String?
-  category          String
-  manufacturer      String?
-  model             String?
-  serialNumber      String?
-  location          String?
-  criticality       EquipmentCriticality @default(MEDIUM)
-  status            EquipmentStatus      @default(OPERATIONAL)
-  installationDate  DateTime?
-  sectorId          String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  id               String               @id @default(uuid())
+  tag              String               @unique
+  name             String
+  description      String?
+  category         String
+  manufacturer     String?
+  model            String?
+  serialNumber     String?
+  location         String?
+  criticality      EquipmentCriticality @default(MEDIUM)
+  status           EquipmentStatus      @default(OPERATIONAL)
+  installationDate DateTime?
+  sectorId         String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
-  sector            Sector             @relation(fields: [sectorId], references: [id])
-  workOrders        WorkOrder[]
-  maintenancePlans  MaintenancePlan[]
-  sensorReadings    SensorReading[]
-  predictions       Prediction[]
-  alerts            Alert[]
-  failureEvents     FailureEvent[]
+  sector           Sector            @relation(fields: [sectorId], references: [id])
+  workOrders       WorkOrder[]
+  maintenancePlans MaintenancePlan[]
+  sensorReadings   SensorReading[]
+  predictions      Prediction[]
+  alerts           Alert[]
+  failureEvents    FailureEvent[]
+  electricalPanels ElectricalPanel[]
 
   @@index([sectorId])
   @@map("equipments")
@@ -180,41 +301,47 @@ model Equipment {
 // ---------------------------------------------------------------------------
 
 model WorkOrder {
-  id               String            @id @default(uuid())
-  number           String            @unique // numeração amigável, ex: OS-2026-0001
-  title            String
-  description      String?
-  type             WorkOrderType
-  priority         WorkOrderPriority @default(MEDIUM)
-  status           WorkOrderStatus   @default(OPEN)
+  id          String            @id @default(uuid())
+  number      String            @unique // numeração amigável, ex: OS-2026-0001
+  title       String
+  description String?
+  type        WorkOrderType
+  priority    WorkOrderPriority @default(MEDIUM)
+  status      WorkOrderStatus   @default(OPEN)
 
-  equipmentId      String
-  assignedUserId   String?
-  createdById      String
+  equipmentId    String
+  assignedUserId String?
+  createdById    String
 
-  scheduledStart   DateTime?
-  scheduledEnd     DateTime?
-  actualStart      DateTime?
-  actualEnd        DateTime?
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+  actualStart    DateTime?
+  actualEnd      DateTime?
 
-  estimatedHours   Float?
-  actualHours      Float?
+  estimatedHours Float?
+  actualHours    Float?
 
-  solution         String?
-  notes            String?
+  solution String?
+  notes    String?
 
   sourcePredictionId String? @unique
+  // Rastreabilidade direta ponto -> OS (GPMS 2026 / Etapa 5), independente de
+  // Equipment (que continua obrigatório acima). Preenchido só pelo fluxo
+  // dedicado de OS preditiva térmica; nunca pelo formulário genérico.
+  thermalPointId     String?
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  equipment        Equipment           @relation(fields: [equipmentId], references: [id])
-  assignedUser     User?               @relation("WorkOrderAssignedTo", fields: [assignedUserId], references: [id])
-  createdBy        User                @relation("WorkOrderCreatedBy", fields: [createdById], references: [id])
-  sourcePrediction Prediction?         @relation(fields: [sourcePredictionId], references: [id])
+  equipment        Equipment                @relation(fields: [equipmentId], references: [id])
+  assignedUser     User?                    @relation("WorkOrderAssignedTo", fields: [assignedUserId], references: [id])
+  createdBy        User                     @relation("WorkOrderCreatedBy", fields: [createdById], references: [id])
+  sourcePrediction Prediction?              @relation(fields: [sourcePredictionId], references: [id])
+  thermalPoint     ThermalPoint?            @relation(fields: [thermalPointId], references: [id], onDelete: SetNull)
   history          WorkOrderHistory[]
   checklistItems   WorkOrderChecklistItem[]
   failureEvents    FailureEvent[]
+  thermalIncident  ThermalIncident?
 
   @@index([equipmentId])
   @@index([assignedUserId])
@@ -223,14 +350,14 @@ model WorkOrder {
 }
 
 model WorkOrderHistory {
-  id             String   @id @default(uuid())
+  id             String           @id @default(uuid())
   workOrderId    String
   userId         String
   action         String
   previousStatus WorkOrderStatus?
   newStatus      WorkOrderStatus?
   description    String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime         @default(now())
 
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id])
@@ -241,10 +368,10 @@ model WorkOrderHistory {
 
 // Checklist "modelo", pertencente ao plano preventivo.
 model MaintenancePlanChecklistItem {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   planId      String
   description String
-  order       Int      @default(0)
+  order       Int    @default(0)
 
   plan MaintenancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
@@ -255,11 +382,11 @@ model MaintenancePlanChecklistItem {
 // Cópia congelada do checklist no momento da criação da OS — preserva
 // histórico mesmo que o MaintenancePlan seja alterado depois (seção 17).
 model WorkOrderChecklistItem {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   workOrderId String
   description String
-  order       Int      @default(0)
-  completed   Boolean  @default(false)
+  order       Int       @default(0)
+  completed   Boolean   @default(false)
   completedAt DateTime?
 
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
@@ -273,22 +400,22 @@ model WorkOrderChecklistItem {
 // ---------------------------------------------------------------------------
 
 model MaintenancePlan {
-  id                 String        @id @default(uuid())
-  name               String
-  description        String?
-  equipmentId        String
-  frequencyType      FrequencyType
-  frequencyValue     Int           @default(1)
-  nextExecution      DateTime
-  estimatedHours     Float?
-  defaultAssigneeId  String?
-  active             Boolean       @default(true)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  name              String
+  description       String?
+  equipmentId       String
+  frequencyType     FrequencyType
+  frequencyValue    Int           @default(1)
+  nextExecution     DateTime
+  estimatedHours    Float?
+  defaultAssigneeId String?
+  active            Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  equipment        Equipment                       @relation(fields: [equipmentId], references: [id])
-  defaultAssignee  User?                            @relation("PlanDefaultAssignee", fields: [defaultAssigneeId], references: [id])
-  checklistItems   MaintenancePlanChecklistItem[]
+  equipment       Equipment                      @relation(fields: [equipmentId], references: [id])
+  defaultAssignee User?                          @relation("PlanDefaultAssignee", fields: [defaultAssigneeId], references: [id])
+  checklistItems  MaintenancePlanChecklistItem[]
 
   @@index([equipmentId])
   @@map("maintenance_plans")
@@ -299,28 +426,28 @@ model MaintenancePlan {
 // ---------------------------------------------------------------------------
 
 model SensorReading {
-  id            String       @id @default(uuid())
-  equipmentId   String
+  id          String @id @default(uuid())
+  equipmentId String
 
-  temperature   Float?
-  vibration     Float?
-  pressure      Float?
-  rpm           Float?
-  current       Float?
-  torque        Float?
+  temperature    Float?
+  vibration      Float?
+  pressure       Float?
+  rpm            Float?
+  current        Float?
+  torque         Float?
   operatingHours Float?
 
   // Campos esperados pelo serviço de IA (app/schemas/prediction_input.py) e
   // pelo dataset AI4I 2020 usado no treino — antes só existiam no FastAPI.
-  airTemperature    Float?
+  airTemperature     Float?
   processTemperature Float?
-  toolWear          Float?
-  rotationalSpeed   Float?
+  toolWear           Float?
+  rotationalSpeed    Float?
 
-  measuredAt    DateTime     @default(now())
-  source        SensorSource @default(MANUAL)
+  measuredAt DateTime     @default(now())
+  source     SensorSource @default(MANUAL)
 
-  createdAt     DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   equipment Equipment @relation(fields: [equipmentId], references: [id])
 
@@ -334,26 +461,68 @@ model SensorReading {
 // ---------------------------------------------------------------------------
 
 model Prediction {
-  id                 String    @id @default(uuid())
-  equipmentId        String
+  id          String  @id @default(uuid())
+  // Anulável desde a Etapa 5: uma Prediction termográfica pode se originar de
+  // um ThermalPoint cujo painel não está vinculado a nenhum Equipment (ex.:
+  // painel geral de distribuição, ligado só ao setor). Nunca inventamos um
+  // Equipment falso para preencher este campo — nesse caso ele fica null. O
+  // fluxo mecânico legado sempre preenche `equipmentId`; nada muda para ele.
+  equipmentId String?
 
   failureProbability Float
   riskLevel          RiskLevel
   predictedClass     Int
 
-  modelVersion       String
+  modelVersion String
 
-  inputSnapshot      Json
-  featuresUsed       Json
+  inputSnapshot Json
+  featuresUsed  Json
 
-  createdAt          DateTime  @default(now())
+  // Campos termográficos (GPMS 2026 / Etapa 1) — todos anuláveis: predições
+  // mecânicas antigas não recebem backfill nem significado termográfico
+  // falso. `failureProbability`, `riskLevel`, `predictedClass`,
+  // `modelVersion`, `inputSnapshot` e `featuresUsed` continuam obrigatórios
+  // e inalterados para o fluxo preditivo mecânico atual.
+  thermalPointId     String?
+  thermalReadingId   String?
+  riskScore          Float?
+  confidence         Float?
+  modelStage         ModelStage?
+  ruleScore          Float?
+  modelScore         Float?
+  trendCPerHour      Float?
+  timeAboveLimitMin  Float?
+  explanations       Json?
+  recommendedAction  String?
+  predictionHorizonH Int?
 
-  equipment  Equipment  @relation(fields: [equipmentId], references: [id])
-  alert      Alert?
-  workOrder  WorkOrder?
+  // Proveniência obrigatória do gateway de IA térmica (GPMS 2026 / Etapa 5).
+  // Anuláveis pelo mesmo motivo dos campos acima (predições mecânicas nunca
+  // os preenchem); o `thermalOrchestratorService` exige todos antes de
+  // considerar uma Prediction termográfica operacionalmente válida — nenhum
+  // formulário, seed ou action administrativa os aceita como entrada.
+  inferenceId           String?       @unique
+  inferenceRequestId    String?
+  featureVersion        String?
+  modelChecksum         String?
+  predictedFailureMode  ThermalCause?
+  failureModeConfidence Float?
+
+  createdAt DateTime @default(now())
+
+  equipment         Equipment?        @relation(fields: [equipmentId], references: [id])
+  thermalPoint      ThermalPoint?     @relation(fields: [thermalPointId], references: [id], onDelete: SetNull)
+  thermalReading    ThermalReading?   @relation(fields: [thermalReadingId], references: [id], onDelete: SetNull)
+  alert             Alert?
+  workOrder         WorkOrder?
+  inferenceRequest  InferenceRequest?
+  triggeredIncident ThermalIncident?  @relation("ThermalIncidentTrigger")
+  humanReviews      HumanReview[]     @relation("HumanReviewReviewedPrediction")
 
   @@index([equipmentId])
   @@index([createdAt])
+  @@index([thermalPointId])
+  @@index([thermalReadingId])
   @@map("predictions")
 }
 
@@ -362,26 +531,41 @@ model Prediction {
 // ---------------------------------------------------------------------------
 
 model Alert {
-  id            String        @id @default(uuid())
-  equipmentId   String
-  predictionId  String        @unique
+  id           String  @id @default(uuid())
+  // Anulável desde a Etapa 5 — mesmo motivo do Prediction.equipmentId acima:
+  // um alerta consolidado de um ThermalIncident pode não ter Equipment real.
+  equipmentId  String?
+  predictionId String  @unique
 
-  type          AlertType     @default(PREDICTIVE_RISK)
-  severity      AlertSeverity
-  status        AlertStatus   @default(OPEN)
+  type     AlertType     @default(PREDICTIVE_RISK)
+  severity AlertSeverity
+  status   AlertStatus   @default(OPEN)
 
-  title         String
-  description   String?
+  title       String
+  description String?
 
   acknowledgedById String?
   acknowledgedAt   DateTime?
 
-  createdAt     DateTime  @default(now())
-  resolvedAt    DateTime?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
 
-  equipment      Equipment   @relation(fields: [equipmentId], references: [id])
-  prediction     Prediction  @relation(fields: [predictionId], references: [id])
-  acknowledgedBy User?       @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  // Consolidação térmica (GPMS 2026 / Etapa 1) — `predictionId` continua
+  // obrigatório/único e a lógica de criação de alerta por predição não é
+  // alterada nesta etapa. A consolidação funcional de múltiplas leituras em
+  // um mesmo alerta térmico fica para etapa posterior.
+  thermalIncidentId String?   @unique
+  firstTriggeredAt  DateTime  @default(now())
+  lastTriggeredAt   DateTime  @default(now())
+  triggerCount      Int       @default(1)
+  peakTemperatureC  Float?
+  peakDeltaTC       Float?
+  escalatedAt       DateTime?
+
+  equipment       Equipment?       @relation(fields: [equipmentId], references: [id])
+  prediction      Prediction       @relation(fields: [predictionId], references: [id])
+  acknowledgedBy  User?            @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  thermalIncident ThermalIncident? @relation(fields: [thermalIncidentId], references: [id], onDelete: SetNull)
 
   @@index([equipmentId])
   @@index([status])
@@ -447,4 +631,329 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// DOMÍNIO TERMOGRÁFICO (GPMS 2026 / Adequação Etapa 1)
+//
+// Hierarquia: Sector -> ElectricalPanel -> MonitoredComponent -> ThermalPoint
+// -> (SensorDevice | ThermalReading -> Thermogram | Prediction | ThermalIncident).
+// Aditivo e retrocompatível: Equipment continua como ativo produtivo, e
+// SensorReading/SensorSource (mecânico/AI4I) permanecem em uso — ver seção
+// "LEITURAS DE SENSOR / MEDIÇÕES" acima. Detalhes de cardinalidade e
+// política de onDelete em docs/architecture.md.
+// ---------------------------------------------------------------------------
+
+model ElectricalPanel {
+  id          String    @id @default(uuid())
+  tag         String    @unique
+  name        String
+  description String?
+  location    String?
+  panelType   PanelType
+  sectorId    String
+  equipmentId String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sector     Sector               @relation(fields: [sectorId], references: [id], onDelete: Restrict)
+  equipment  Equipment?           @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+  components MonitoredComponent[]
+
+  @@index([sectorId])
+  @@index([equipmentId])
+  @@map("electrical_panels")
+}
+
+model MonitoredComponent {
+  id            String                  @id @default(uuid())
+  tag           String                  @unique
+  name          String
+  componentType ElectricalComponentType
+  phase         String?
+  ratedCurrent  Float?
+  manufacturer  String?
+  model         String?
+  panelId       String
+  active        Boolean                 @default(true)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  panel         ElectricalPanel @relation(fields: [panelId], references: [id], onDelete: Restrict)
+  thermalPoints ThermalPoint[]
+
+  @@index([panelId])
+  @@map("monitored_components")
+}
+
+model ThermalPoint {
+  id                   String         @id @default(uuid())
+  code                 String         @unique
+  name                 String
+  componentId          String
+  monitoringMode       MonitoringMode
+  emissivity           Float?
+  referenceDescription String?
+  absoluteLimitC       Float?
+  deltaTAttentionC     Float?
+  deltaTHighC          Float?
+  deltaTCriticalC      Float?
+  sampleIntervalSec    Int            @default(60)
+  initiallyAnomalous   Boolean        @default(false)
+  active               Boolean        @default(true)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  component         MonitoredComponent @relation(fields: [componentId], references: [id], onDelete: Restrict)
+  devices           SensorDevice[]
+  readings          ThermalReading[]
+  predictions       Prediction[]
+  incidents         ThermalIncident[]
+  inferenceRequests InferenceRequest[]
+  workOrders        WorkOrder[]
+
+  @@index([componentId])
+  @@map("thermal_points")
+}
+
+// Cadastro do dispositivo/sensor físico. Nunca armazena a chave de API em
+// texto puro — apenas `apiKeyHash`. Geração, exibição, rotação e
+// autenticação por chave ficam para etapa posterior (backend do domínio /
+// telemetria).
+model SensorDevice {
+  id              String       @id @default(uuid())
+  serialNumber    String       @unique
+  name            String
+  manufacturer    String?
+  model           String?
+  firmwareVersion String?
+  status          DeviceStatus @default(PROVISIONING)
+  thermalPointId  String
+  lastSeenAt      DateTime?
+  lastSequence    BigInt?
+  calibrationDate DateTime?
+  installedAt     DateTime?
+  disabledAt      DateTime?
+  apiKeyHash      String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  thermalPoint ThermalPoint     @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
+  readings     ThermalReading[]
+
+  @@index([thermalPointId])
+  @@index([status, lastSeenAt])
+  @@map("sensor_devices")
+}
+
+// Leitura termográfica bruta. `sensorDeviceId` é opcional para permitir
+// leitura manual/CSV/simulador sem dispositivo. A unicidade
+// [sensorDeviceId, sequence] garante idempotência de reenvio por
+// dispositivo, mas no PostgreSQL colunas anuláveis não colidem entre si
+// (cada NULL é distinto): isso protege a combinação enviada por um
+// dispositivo real, mas NÃO deve ser usada como idempotência para leituras
+// manuais/CSV sem dispositivo/sequence — múltiplas linhas com
+// sensorDeviceId=NULL e sequence=NULL são todas aceitas.
+model ThermalReading {
+  id                    String         @id @default(uuid())
+  thermalPointId        String
+  sensorDeviceId        String?
+  measuredAt            DateTime
+  receivedAt            DateTime       @default(now())
+  sequence              BigInt?
+  temperatureMaxC       Float
+  temperatureAverageC   Float?
+  ambientTemperatureC   Float?
+  referenceTemperatureC Float?
+  deltaTC               Float?
+  currentA              Float?
+  loadPercent           Float?
+  emissivity            Float?
+  signalQuality         Float?
+  source                MonitoringMode
+  analysisStatus        AnalysisStatus @default(PENDING_AI)
+  rawPayload            Json?
+
+  thermalPoint      ThermalPoint       @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
+  sensorDevice      SensorDevice?      @relation(fields: [sensorDeviceId], references: [id], onDelete: SetNull)
+  thermogram        Thermogram?
+  predictions       Prediction[]
+  inferenceRequests InferenceRequest[]
+
+  @@unique([sensorDeviceId, sequence])
+  @@index([thermalPointId, measuredAt])
+  @@index([measuredAt])
+  @@index([analysisStatus, measuredAt])
+  @@map("thermal_readings")
+}
+
+// Apenas metadados do termograma — armazenamento/upload do arquivo fica
+// para etapa posterior. Removido em cascata somente quando a leitura à qual
+// pertence é removida.
+model Thermogram {
+  id               String   @id @default(uuid())
+  thermalReadingId String   @unique
+  storageKey       String
+  mimeType         String
+  width            Int?
+  height           Int?
+  minTemperatureC  Float?
+  maxTemperatureC  Float?
+  roi              Json?
+  capturedAt       DateTime
+  createdAt        DateTime @default(now())
+
+  thermalReading ThermalReading @relation(fields: [thermalReadingId], references: [id], onDelete: Cascade)
+
+  @@map("thermograms")
+}
+
+// Consolida uma sequência anormal de leituras de um mesmo ThermalPoint.
+// Relação opcional 1:1 com WorkOrder (workOrderId @unique) garante que um
+// incidente nunca origine mais de uma OS.
+model ThermalIncident {
+  id               String         @id @default(uuid())
+  thermalPointId   String
+  status           IncidentStatus @default(PENDING_HUMAN_REVIEW)
+  severity         AlertSeverity
+  openedAt         DateTime       @default(now())
+  acknowledgedAt   DateTime?
+  normalizedAt     DateTime?
+  peakTemperatureC Float
+  peakDeltaTC      Float?
+  lastRiskScore    Float
+  cause            ThermalCause   @default(NOT_CONFIRMED)
+  diagnosis        String?
+  recommendation   String?
+  workOrderId      String?        @unique
+  acknowledgedById String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Governança da IA (GPMS 2026 / Etapa 5) — referência obrigatória à
+  // Prediction que originou o incidente (nunca nasce de leitura/threshold
+  // isolado) e contagem de quantas predições subsequentes confirmaram a
+  // persistência da condição. `humanReviewDecision`/`reviewedAt`/`reviewedById`
+  // guardam só a decisão ATUAL (snapshot); o histórico completo e imutável
+  // fica em `HumanReview`.
+  triggerPredictionId String               @unique
+  triggerCount        Int                  @default(1)
+  humanReviewDecision HumanReviewDecision?
+  reviewedAt          DateTime?
+  reviewedById        String?
+
+  thermalPoint      ThermalPoint  @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
+  workOrder         WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  acknowledgedBy    User?         @relation("ThermalIncidentAcknowledgedBy", fields: [acknowledgedById], references: [id], onDelete: SetNull)
+  reviewedBy        User?         @relation("ThermalIncidentReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  triggerPrediction Prediction    @relation("ThermalIncidentTrigger", fields: [triggerPredictionId], references: [id], onDelete: Restrict)
+  alert             Alert?
+  humanReviews      HumanReview[]
+
+  @@index([thermalPointId, status])
+  @@index([severity, status])
+  @@map("thermal_incidents")
+}
+
+// ---------------------------------------------------------------------------
+// REVISÃO HUMANA DO DEFEITO (GPMS 2026 / Etapa 5)
+//
+// Histórico imutável — cada linha é uma decisão isolada, nunca sobrescrita.
+// `ThermalIncident.humanReviewDecision/reviewedAt/reviewedById` guarda só o
+// snapshot mais recente para leitura rápida; esta tabela é a fonte de
+// verdade auditável de TODAS as decisões já tomadas sobre o incidente.
+// ---------------------------------------------------------------------------
+
+model HumanReview {
+  id                   String              @id @default(uuid())
+  thermalIncidentId    String
+  reviewedPredictionId String
+  decision             HumanReviewDecision
+  // Obrigatória para REJECTED/INCONCLUSIVE/NEW_READING_REQUIRED — validada
+  // pelo service, não pelo banco (Postgres não expressa bem "obrigatório só
+  // quando X"); CONFIRMED aceita justificativa opcional.
+  justification        String?
+  previousStatus       IncidentStatus
+  nextStatus           IncidentStatus
+  reviewedById         String
+  createdAt            DateTime            @default(now())
+
+  thermalIncident    ThermalIncident @relation(fields: [thermalIncidentId], references: [id], onDelete: Restrict)
+  reviewedPrediction Prediction      @relation("HumanReviewReviewedPrediction", fields: [reviewedPredictionId], references: [id], onDelete: Restrict)
+  reviewedBy         User            @relation("HumanReviewReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([thermalIncidentId, createdAt])
+  @@map("human_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// FILA DE INFERÊNCIA (idempotência/retry/backfill — GPMS 2026 / Etapa 5)
+//
+// Cada leitura elegível para análise ganha, no máximo, uma linha PENDING por
+// `featureVersion`. `inferenceRequestId` é a chave determinística e única que
+// impede duas execuções concorrentes (ou um retry) de duplicarem a mesma
+// inferência — nunca gerada por Math.random(), sempre derivada de
+// (thermalReadingId, featureVersion).
+// ---------------------------------------------------------------------------
+
+model InferenceRequest {
+  id                 String                 @id @default(uuid())
+  inferenceRequestId String                 @unique
+  thermalReadingId   String
+  thermalPointId     String
+  featureVersion     String
+  status             InferenceRequestStatus @default(PENDING)
+  attemptCount       Int                    @default(0)
+  lastAttemptAt      DateTime?
+  lastErrorCode      String?
+  lastErrorMessage   String?
+  predictionId       String?                @unique
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  thermalReading ThermalReading @relation(fields: [thermalReadingId], references: [id], onDelete: Restrict)
+  thermalPoint   ThermalPoint   @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
+  prediction     Prediction?    @relation(fields: [predictionId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([thermalPointId, status])
+  @@map("inference_requests")
+}
+
+// ---------------------------------------------------------------------------
+// CONFIGURAÇÕES TÉRMICAS (GPMS 2026 / Etapa 3)
+//
+// Precedência de resolução (thermal-settings.service.ts):
+// override do ThermalPoint (colunas próprias, já existentes) ->
+// ThermalComponentTypeConfig -> ThermalGlobalConfig -> padrão versionado em
+// código. Nunca usados para criar Prediction, incidente ou alerta — são
+// apenas contexto de plausibilidade/engenharia para a futura IA (Etapa 5+).
+// `updatedById` é referência solta (sem @relation), no mesmo padrão já usado
+// por RiskThresholdConfig acima.
+// ---------------------------------------------------------------------------
+
+model ThermalGlobalConfig {
+  id               String   @id @default("default")
+  absoluteLimitC   Float
+  deltaTAttentionC Float
+  deltaTHighC      Float
+  deltaTCriticalC  Float
+  updatedAt        DateTime @updatedAt
+  updatedById      String?
+
+  @@map("thermal_global_configs")
+}
+
+model ThermalComponentTypeConfig {
+  id               String                  @id @default(uuid())
+  componentType    ElectricalComponentType @unique
+  absoluteLimitC   Float?
+  deltaTAttentionC Float?
+  deltaTHighC      Float?
+  deltaTCriticalC  Float?
+  updatedAt        DateTime                @updatedAt
+  updatedById      String?
+
+  @@map("thermal_component_type_configs")
 }

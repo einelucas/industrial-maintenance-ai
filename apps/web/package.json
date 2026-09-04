@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
+    "thermal:backfill": "tsx scripts/thermal-backfill.ts",
     "test": "vitest run"
   },
   "prisma": {

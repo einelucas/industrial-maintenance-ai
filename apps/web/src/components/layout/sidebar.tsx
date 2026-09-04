@@ -10,6 +10,12 @@ import {
   Wrench,
   Users,
   Settings,
+  PanelsTopLeft,
+  Cpu,
+  Thermometer,
+  Radio,
+  SlidersHorizontal,
+  Gauge,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { can, type Permission } from "@/lib/permissions/policies";
@@ -23,8 +29,16 @@ const NAV_ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; pe
   { href: "/alerts", label: "Alertas", icon: AlertTriangle },
   { href: "/schedule", label: "Cronograma", icon: CalendarClock },
   { href: "/reports", label: "Relatórios", icon: FileBarChart },
+  // Domínio termográfico (GPMS 2026 / Etapa 3) — cadastro estrutural, sem
+  // dashboard analítico (isso é Etapa 6).
+  { href: "/electrical-panels", label: "Painéis Elétricos", icon: PanelsTopLeft, permission: "panel:view" },
+  { href: "/monitored-components", label: "Componentes Monitorados", icon: Cpu, permission: "panel:view" },
+  { href: "/thermal-points", label: "Pontos Termográficos", icon: Thermometer, permission: "thermal-point:view" },
+  { href: "/thermal-readings", label: "Leituras Termográficas", icon: Gauge, permission: "thermal-reading:view" },
+  { href: "/sensor-devices", label: "Dispositivos", icon: Radio, permission: "device:view" },
   { href: "/users", label: "Usuários", icon: Users, permission: "user:manage" },
   { href: "/settings", label: "Configurações", icon: Settings, permission: "settings:manage" },
+  { href: "/settings/thermal", label: "Config. Térmica", icon: SlidersHorizontal, permission: "thermal-settings:manage" },
 ];
 
 export function Sidebar({ role }: { role: UserRole }) {

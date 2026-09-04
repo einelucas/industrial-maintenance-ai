@@ -17,20 +17,16 @@ export function WorkOrderForm({
   technicians,
   defaultEquipmentId,
   defaultType,
-  sourcePredictionId,
 }: {
   equipments: EquipmentWithSector[];
   technicians: User[];
   defaultEquipmentId?: string;
   defaultType?: string;
-  sourcePredictionId?: string;
 }) {
   const [state, formAction] = useFormState(createWorkOrderAction, initialState);
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {sourcePredictionId && <input type="hidden" name="sourcePredictionId" value={sourcePredictionId} />}
-
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="title">Título *</Label>
         <Input id="title" name="title" required placeholder="Ex: Verificar vibração anormal" />
@@ -57,10 +53,12 @@ export function WorkOrderForm({
         <Select id="type" name="type" required defaultValue={defaultType ?? "CORRECTIVE"}>
           <option value="CORRECTIVE">Corretiva</option>
           <option value="PREVENTIVE">Preventiva</option>
-          <option value="PREDICTIVE">Preditiva</option>
           <option value="INSPECTION">Inspeção</option>
           <option value="IMPROVEMENT">Melhoria</option>
         </Select>
+        {/* "Preditiva" propositalmente ausente (AI-first / Etapa 3): só nasce do
+            fluxo interno Prediction -> ThermalIncident -> revisão humana
+            CONFIRMED -> WorkOrder, nunca deste formulário genérico. */}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="priority">Prioridade *</Label>

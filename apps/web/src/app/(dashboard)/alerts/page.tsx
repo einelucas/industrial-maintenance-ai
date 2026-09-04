@@ -85,10 +85,16 @@ export default async function AlertsPage({ searchParams }: { searchParams: Searc
               {alerts.map((alert) => (
                 <TableRow key={alert.id}>
                   <TableCell>
-                    <Link href={`/equipments/${alert.equipmentId}`} className="text-primary hover:underline">
-                      {alert.equipment.tag}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">{alert.equipment.sector.name}</div>
+                    {alert.equipment ? (
+                      <>
+                        <Link href={`/equipments/${alert.equipmentId}`} className="text-primary hover:underline">
+                          {alert.equipment.tag}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">{alert.equipment.sector.name}</div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div>{alert.title}</div>

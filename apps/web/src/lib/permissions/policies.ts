@@ -16,7 +16,24 @@ export type Permission =
   | "workorder:view"
   | "alert:manage" // reconhecer, transformar em OS
   | "dashboard:view"
-  | "report:view";
+  | "report:view"
+  // Domínio termográfico (GPMS 2026 / Etapa 1)
+  | "panel:view"
+  | "panel:manage"
+  | "thermal-point:view"
+  | "thermal-point:manage"
+  | "device:view"
+  | "device:manage"
+  | "incident:view"
+  | "incident:acknowledge"
+  | "incident:diagnose"
+  | "incident:convert-to-work-order"
+  | "thermal-settings:manage"
+  // Entrada de leituras termográficas (GPMS 2026 / Etapa 4)
+  | "thermal-reading:view"
+  | "thermal-reading:create"
+  | "thermal-reading:import"
+  | "thermal-reading:simulate";
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ADMIN: [
@@ -31,6 +48,21 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "alert:manage",
     "dashboard:view",
     "report:view",
+    "panel:view",
+    "panel:manage",
+    "thermal-point:view",
+    "thermal-point:manage",
+    "device:view",
+    "device:manage",
+    "incident:view",
+    "incident:acknowledge",
+    "incident:diagnose",
+    "incident:convert-to-work-order",
+    "thermal-settings:manage",
+    "thermal-reading:view",
+    "thermal-reading:create",
+    "thermal-reading:import",
+    "thermal-reading:simulate",
   ],
   PLANNER: [
     "equipment:manage",
@@ -41,9 +73,43 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "alert:manage",
     "dashboard:view",
     "report:view",
+    "panel:view",
+    "panel:manage",
+    "thermal-point:view",
+    "thermal-point:manage",
+    "device:view",
+    "incident:view",
+    "incident:acknowledge",
+    "incident:diagnose",
+    "incident:convert-to-work-order",
+    "thermal-reading:view",
+    "thermal-reading:create",
+    "thermal-reading:import",
+    "thermal-reading:simulate",
   ],
-  TECHNICIAN: ["workorder:execute", "workorder:view", "dashboard:view"],
-  MANAGER: ["workorder:view", "dashboard:view", "report:view"],
+  TECHNICIAN: [
+    "workorder:execute",
+    "workorder:view",
+    "dashboard:view",
+    "panel:view",
+    "thermal-point:view",
+    "device:view",
+    "incident:view",
+    "incident:acknowledge",
+    "incident:diagnose",
+    "thermal-reading:view",
+    "thermal-reading:create",
+  ],
+  MANAGER: [
+    "workorder:view",
+    "dashboard:view",
+    "report:view",
+    "panel:view",
+    "thermal-point:view",
+    "device:view",
+    "incident:view",
+    "thermal-reading:view",
+  ],
 };
 
 export function can(role: UserRole, permission: Permission): boolean {

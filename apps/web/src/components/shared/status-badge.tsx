@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { RiskLevel, WorkOrderStatus, WorkOrderPriority, EquipmentStatus, AlertSeverity } from "@prisma/client";
+import type { RiskLevel, WorkOrderStatus, WorkOrderPriority, EquipmentStatus, AlertSeverity, AnalysisStatus } from "@prisma/client";
 
 // Mapeamento único de cor por nível de risco/severidade/status (seção 31):
 // normal -> neutro/verde, atenção -> amarelo, alto risco -> laranja, crítico -> vermelho.
@@ -80,4 +80,34 @@ const EQUIPMENT_STATUS_VARIANT: Record<EquipmentStatus, "neutral" | "attention" 
 };
 export function EquipmentStatusBadge({ status }: { status: EquipmentStatus }) {
   return <Badge variant={EQUIPMENT_STATUS_VARIANT[status]}>{EQUIPMENT_STATUS_LABEL[status]}</Badge>;
+}
+
+// Domínio termográfico AI-first (GPMS 2026 / Etapa 3+): a ausência de uma
+// Prediction NUNCA deve ser lida como "normal" — por isso usa a variante
+// "muted" (neutra/cinza), nunca "neutral" (que no resto do app já significa
+// "risco baixo/operacional", ou seja, um veredito, não uma ausência dele).
+export function AwaitingAiAnalysisBadge() {
+  return <Badge variant="muted">Aguardando análise da IA</Badge>;
+}
+
+// Estado de análise de uma leitura individual (GPMS 2026 / Etapa 4). Mesma
+// regra: nenhuma destas variantes é "neutral" (que já significa "risco
+// baixo" em outros lugares do app) — a ausência ou falha de análise nunca é
+// pintada como se fosse um veredito de normalidade.
+const ANALYSIS_STATUS_LABEL: Record<AnalysisStatus, string> = {
+  PENDING_AI: "Aguardando IA",
+  ANALYZED: "Analisada",
+  AI_FAILED: "Falha na IA",
+  SUPERSEDED: "Substituída",
+};
+
+const ANALYSIS_STATUS_VARIANT: Record<AnalysisStatus, "muted" | "attention"> = {
+  PENDING_AI: "muted",
+  ANALYZED: "muted",
+  AI_FAILED: "attention",
+  SUPERSEDED: "muted",
+};
+
+export function AnalysisStatusBadge({ status }: { status: AnalysisStatus }) {
+  return <Badge variant={ANALYSIS_STATUS_VARIANT[status]}>{ANALYSIS_STATUS_LABEL[status]}</Badge>;
 }

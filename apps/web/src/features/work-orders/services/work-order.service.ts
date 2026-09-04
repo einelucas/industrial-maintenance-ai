@@ -29,8 +29,10 @@ export const workOrderService = {
     const data = parsed.data;
     const number = await generateWorkOrderNumber();
 
-    // Se a OS nasce de uma predição, copia o checklist do plano preventivo
-    // do equipamento (se existir) — comportamento best-effort, não bloqueante.
+    // `data.type` nunca pode ser "PREDICTIVE" aqui — o schema genérico não
+    // aceita esse valor (ver comentário em work-order.schema.ts). Uma OS
+    // preditiva só nasce de `alertService.convertToWorkOrder()`, um fluxo
+    // interno separado com proveniência real de `Prediction`.
     const workOrder = await prisma.workOrder.create({
       data: {
         number,
@@ -45,7 +47,6 @@ export const workOrderService = {
         scheduledStart: data.scheduledStart ? new Date(data.scheduledStart) : undefined,
         scheduledEnd: data.scheduledEnd ? new Date(data.scheduledEnd) : undefined,
         estimatedHours: data.estimatedHours,
-        sourcePrediction: data.sourcePredictionId ? { connect: { id: data.sourcePredictionId } } : undefined,
       },
     });
 

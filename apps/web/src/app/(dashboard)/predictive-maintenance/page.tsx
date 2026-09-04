@@ -107,7 +107,7 @@ export default async function PredictiveMaintenancePage() {
               {recentPredictions.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>{formatDateTime(p.createdAt)}</TableCell>
-                  <TableCell>{p.equipment.tag}</TableCell>
+                  <TableCell>{p.equipment?.tag ?? "—"}</TableCell>
                   <TableCell>{formatPercent(p.failureProbability)}</TableCell>
                   <TableCell><RiskBadge level={p.riskLevel} /></TableCell>
                   <TableCell className="font-mono text-xs">{p.modelVersion}</TableCell>

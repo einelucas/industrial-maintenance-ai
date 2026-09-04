@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/client";
 import { alertRepository, type AlertFilters } from "@/features/alerts/repositories/alert.repository";
 import { generateWorkOrderNumber } from "@/features/work-orders/services/work-order-number.service";
-import { NotFoundError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 
 export const alertService = {
   listOpen: () => alertRepository.findOpen(),
@@ -23,6 +23,16 @@ export const alertService = {
   async convertToWorkOrder(alertId: string, userId: string) {
     const alert = await alertRepository.findById(alertId);
     if (!alert) throw new NotFoundError("Alerta", alertId);
+    // `equipmentId` é anulável desde a Etapa 5 (alerta térmico consolidado
+    // pode vir de um ponto sem Equipment real) — mas este fluxo é só o
+    // mecânico legado, que sempre grava `equipmentId`. Guarda explícita em
+    // vez de assumir: falha claro aqui em vez de um erro obscuro do Prisma
+    // se algum dia um alerta térmico chegar por engano neste caminho (o
+    // caminho térmico correto é `predictiveWorkOrderService`, não este).
+    if (!alert.equipmentId) {
+      throw new ValidationError("Este alerta não está vinculado a um equipamento — não é possível converter em OS por este fluxo.");
+    }
+    const equipmentId = alert.equipmentId;
 
     const number = await generateWorkOrderNumber();
 
@@ -35,7 +45,7 @@ export const alertService = {
           type: "PREDICTIVE",
           priority: alert.severity === "CRITICAL" ? "CRITICAL" : "HIGH",
           status: "OPEN",
-          equipment: { connect: { id: alert.equipmentId } },
+          equipment: { connect: { id: equipmentId } },
           createdBy: { connect: { id: userId } },
           sourcePrediction: { connect: { id: alert.predictionId } },
         },

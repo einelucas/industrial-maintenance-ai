@@ -7,7 +7,7 @@ import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 export default async function NewWorkOrderPage({
   searchParams,
 }: {
-  searchParams: { equipmentId?: string; type?: string; sourcePredictionId?: string };
+  searchParams: { equipmentId?: string; type?: string };
 }) {
   const [equipments, technicians] = await Promise.all([
     equipmentService.list(),
@@ -33,7 +33,6 @@ export default async function NewWorkOrderPage({
             technicians={technicians}
             defaultEquipmentId={searchParams.equipmentId}
             defaultType={searchParams.type}
-            sourcePredictionId={searchParams.sourcePredictionId}
           />
         </CardContent>
       </Card>

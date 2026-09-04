@@ -1,0 +1,491 @@
+{
+  "manifestVersion": "1.0.0",
+  "scenarioVersion": "gpms2026-demo-scenario-v1",
+  "generatedFrom": {
+    "identitySeed": 20260903,
+    "seriesSeed": 356194
+  },
+  "period": {
+    "startAt": "2026-08-29T07:00:00.000Z",
+    "endAt": "2026-09-03T06:00:00.000Z",
+    "sampleIntervalMinutes": 60
+  },
+  "note": "Ground truth do cenário demonstrativo reservado do GPMS 2026. Fica fora do caminho de decisão do runtime: não é servido ao frontend, não é consultado pelos services da aplicação e não define o estado atual dos pontos. `initiallyAnomalous` registra apenas o fato histórico da inspeção original (19 de 55 pontos). O estado operacional atual só pode nascer de uma inferência real da IA (etapas futuras).",
+  "trainingUsage": "Este cenário (seed de identidade, seed de série e período) é reservado para a demonstração e não deve ser reutilizado no treino/validação/teste do modelo — que usarão seeds e períodos distintos (Etapa 7), evitando memorização/vazamento.",
+  "totalPoints": 55,
+  "initiallyAnomalousCount": 19,
+  "officialCriticalCase": {
+    "pointCode": "TP-039",
+    "cause": "LOOSE_CONNECTION",
+    "peak": {
+      "temperatureMaxC": 75.6,
+      "referenceTemperatureC": 40,
+      "deltaTC": 35.6,
+      "measuredAt": "2026-09-03T06:00:00.000Z"
+    },
+    "reservedPostAction": {
+      "note": "Fase de normalização pós-intervenção. NÃO foi persistida no banco pelo seed. Só deverá ser liberada/aplicada depois que uma OS futura para este ponto for concluída (Etapa 10), para não antecipar ao runtime que a manutenção já ocorreu.",
+      "readings": [
+        {
+          "measuredAt": "2026-09-03T07:00:00.000Z",
+          "temperatureMaxC": 55.5,
+          "referenceTemperatureC": 40,
+          "deltaTC": 15.5
+        },
+        {
+          "measuredAt": "2026-09-03T08:00:00.000Z",
+          "temperatureMaxC": 50,
+          "referenceTemperatureC": 40,
+          "deltaTC": 10
+        },
+        {
+          "measuredAt": "2026-09-03T09:00:00.000Z",
+          "temperatureMaxC": 46.4,
+          "referenceTemperatureC": 40,
+          "deltaTC": 6.4
+        },
+        {
+          "measuredAt": "2026-09-03T10:00:00.000Z",
+          "temperatureMaxC": 44,
+          "referenceTemperatureC": 40,
+          "deltaTC": 4
+        },
+        {
+          "measuredAt": "2026-09-03T11:00:00.000Z",
+          "temperatureMaxC": 42.5,
+          "referenceTemperatureC": 40,
+          "deltaTC": 2.5
+        },
+        {
+          "measuredAt": "2026-09-03T12:00:00.000Z",
+          "temperatureMaxC": 41.4,
+          "referenceTemperatureC": 40,
+          "deltaTC": 1.4
+        },
+        {
+          "measuredAt": "2026-09-03T13:00:00.000Z",
+          "temperatureMaxC": 39.6,
+          "referenceTemperatureC": 40,
+          "deltaTC": -0.4
+        },
+        {
+          "measuredAt": "2026-09-03T14:00:00.000Z",
+          "temperatureMaxC": 39.4,
+          "referenceTemperatureC": 40,
+          "deltaTC": -0.6
+        },
+        {
+          "measuredAt": "2026-09-03T15:00:00.000Z",
+          "temperatureMaxC": 38.1,
+          "referenceTemperatureC": 40,
+          "deltaTC": -1.9
+        },
+        {
+          "measuredAt": "2026-09-03T16:00:00.000Z",
+          "temperatureMaxC": 39.1,
+          "referenceTemperatureC": 40,
+          "deltaTC": -0.9
+        },
+        {
+          "measuredAt": "2026-09-03T17:00:00.000Z",
+          "temperatureMaxC": 37.9,
+          "referenceTemperatureC": 40,
+          "deltaTC": -2.1
+        },
+        {
+          "measuredAt": "2026-09-03T18:00:00.000Z",
+          "temperatureMaxC": 36.4,
+          "referenceTemperatureC": 40,
+          "deltaTC": -3.6
+        }
+      ]
+    }
+  },
+  "points": [
+    {
+      "code": "TP-001",
+      "componentTag": "CMP-AUT-001-1",
+      "initiallyAnomalous": true,
+      "cause": "CONTACT_RESISTANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-002",
+      "componentTag": "CMP-AUT-001-2",
+      "initiallyAnomalous": true,
+      "cause": "OVERLOAD",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-003",
+      "componentTag": "CMP-AUT-001-3",
+      "initiallyAnomalous": true,
+      "cause": "LOOSE_CONNECTION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-004",
+      "componentTag": "CMP-AUT-002-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-005",
+      "componentTag": "CMP-AUT-002-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-006",
+      "componentTag": "CMP-AUT-002-3",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-007",
+      "componentTag": "CMP-AUT-003-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-008",
+      "componentTag": "CMP-AUT-003-2",
+      "initiallyAnomalous": true,
+      "cause": "OVERLOAD",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-009",
+      "componentTag": "CMP-AUT-003-3",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-010",
+      "componentTag": "CMP-AUT-004-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-011",
+      "componentTag": "CMP-AUT-004-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-012",
+      "componentTag": "CMP-AUT-004-3",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-013",
+      "componentTag": "CMP-EST-001-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-014",
+      "componentTag": "CMP-EST-001-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-015",
+      "componentTag": "CMP-EST-002-1",
+      "initiallyAnomalous": true,
+      "cause": "LOOSE_CONNECTION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-016",
+      "componentTag": "CMP-EST-002-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-017",
+      "componentTag": "CMP-EST-003-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-018",
+      "componentTag": "CMP-EST-003-2",
+      "initiallyAnomalous": true,
+      "cause": "CONTACT_RESISTANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-019",
+      "componentTag": "CMP-EST-004-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-020",
+      "componentTag": "CMP-EST-004-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-021",
+      "componentTag": "CMP-CFR-001-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-022",
+      "componentTag": "CMP-CFR-001-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-023",
+      "componentTag": "CMP-CFR-002-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-024",
+      "componentTag": "CMP-CFR-002-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-025",
+      "componentTag": "CMP-CFR-003-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-026",
+      "componentTag": "CMP-CFR-003-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-027",
+      "componentTag": "CMP-CFR-004-1",
+      "initiallyAnomalous": true,
+      "cause": "THERMAL_RELAY_DEGRADATION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-028",
+      "componentTag": "CMP-CFR-004-2",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-029",
+      "componentTag": "CMP-CTF-001-1",
+      "initiallyAnomalous": true,
+      "cause": "PHASE_IMBALANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-030",
+      "componentTag": "CMP-CTF-002-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-031",
+      "componentTag": "CMP-CTF-003-1",
+      "initiallyAnomalous": true,
+      "cause": "PHASE_IMBALANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-032",
+      "componentTag": "CMP-CTF-004-1",
+      "initiallyAnomalous": true,
+      "cause": "CONTACT_RESISTANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-033",
+      "componentTag": "CMP-CTF-005-1",
+      "initiallyAnomalous": true,
+      "cause": "THERMAL_RELAY_DEGRADATION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-034",
+      "componentTag": "CMP-CTF-006-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-035",
+      "componentTag": "CMP-CTF-007-1",
+      "initiallyAnomalous": true,
+      "cause": "INSUFFICIENT_VENTILATION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-036",
+      "componentTag": "CMP-CTF-008-1",
+      "initiallyAnomalous": true,
+      "cause": "PHASE_IMBALANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-037",
+      "componentTag": "CMP-CTF-009-1",
+      "initiallyAnomalous": true,
+      "cause": "DEGRADED_CONTACT",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-038",
+      "componentTag": "CMP-CTF-010-1",
+      "initiallyAnomalous": true,
+      "cause": "CONTACT_RESISTANCE",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-039",
+      "componentTag": "CMP-CTF-011-1",
+      "initiallyAnomalous": true,
+      "cause": "LOOSE_CONNECTION",
+      "isOfficialCriticalCase": true
+    },
+    {
+      "code": "TP-040",
+      "componentTag": "CMP-CTF-012-1",
+      "initiallyAnomalous": true,
+      "cause": "LOOSE_CONNECTION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-041",
+      "componentTag": "CMP-CTF-013-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-042",
+      "componentTag": "CMP-CTF-014-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-043",
+      "componentTag": "CMP-CTF-015-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-044",
+      "componentTag": "CMP-CTF-016-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-045",
+      "componentTag": "CMP-CTF-017-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-046",
+      "componentTag": "CMP-CTF-018-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-047",
+      "componentTag": "CMP-CTF-019-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-048",
+      "componentTag": "CMP-CTF-020-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-049",
+      "componentTag": "CMP-CTF-021-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-050",
+      "componentTag": "CMP-UTIL-1",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-051",
+      "componentTag": "CMP-UTIL-2",
+      "initiallyAnomalous": true,
+      "cause": "LOOSE_CONNECTION",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-052",
+      "componentTag": "CMP-UTIL-3",
+      "initiallyAnomalous": true,
+      "cause": "OVERLOAD",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-053",
+      "componentTag": "CMP-UTIL-4",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-054",
+      "componentTag": "CMP-UTIL-5",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    },
+    {
+      "code": "TP-055",
+      "componentTag": "CMP-UTIL-6",
+      "initiallyAnomalous": false,
+      "cause": "NOT_CONFIRMED",
+      "isOfficialCriticalCase": false
+    }
+  ]
+}
