@@ -3,5 +3,5 @@ import { auth } from "@/lib/auth/auth";
 
 export default async function RootPage() {
   const session = await auth();
-  redirect(session?.user ? "/dashboard" : "/login");
+  redirect(session?.user ? "/thermal-monitoring" : "/login");
 }

@@ -1,3 +1,7 @@
+# Estado atual da adequação térmica
+
+> Em 08/09/2026, as Etapas 6–8 passaram a usar `/thermal-monitoring`, dataset temporal separado e FastAPI térmico obrigatório. O fluxo mecânico documentado abaixo é histórico: seu dashboard, formulários de inferência e conversão direta de alerta em OS não fazem parte da experiência operacional vigente. O modelo atual é `SYNTHETIC_EXPERIMENTAL`, não possui fallback e ainda requer validação com dados reais da planta. Consulte `Adequaçoes.md`, `docs/architecture.md` e `docs/prompts/etapa-8-treinamento-integracao-fastapi.md` para o contrato atual.
+
 # Fluxo de Manutenção Preditiva
 
 ```

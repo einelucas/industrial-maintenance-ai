@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/client";
 import { predictiveAiClient } from "@/features/predictions/services/predictive-ai.client";
 import { predictionRepository } from "@/features/predictions/repositories/prediction.repository";
 import type { SensorReading } from "@prisma/client";
+import { assertMechanicalWorkflowAvailable } from "./legacy-mechanical-gate";
 
 /**
  * Faixas de severidade de Alert derivadas do riskLevel retornado pela IA.
@@ -20,6 +21,7 @@ export const predictionService = {
    * (seção 22).
    */
   async runPredictionForReading(reading: SensorReading) {
+    assertMechanicalWorkflowAvailable();
     const result = await predictiveAiClient.predictFailure({
       equipmentId: reading.equipmentId,
       temperature: reading.temperature ?? undefined,

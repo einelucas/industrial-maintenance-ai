@@ -80,12 +80,17 @@ describe("thermalInferenceResponseSchema — payload estrito", () => {
 });
 
 describe("thermalReadinessResponseSchema", () => {
-  it("aceita o contrato mecânico atual sem quebrar o parse (predictorType demo/sklearn)", () => {
+  it("aceita o contrato mecânico legado apenas para permitir recusa explícita posterior", () => {
     const result = thermalReadinessResponseSchema.safeParse({ status: "ok", appVersion: "1.0.0", modelLoaded: true, predictorType: "demo" });
     expect(result.success).toBe(true);
   });
 
   it("aceita um payload vazio (health check indisponível/inesperado) sem lançar", () => {
     expect(thermalReadinessResponseSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("valida o formato do checksum quando o health térmico o informa", () => {
+    expect(thermalReadinessResponseSchema.safeParse({ modelChecksum: "inválido" }).success).toBe(false);
+    expect(thermalReadinessResponseSchema.safeParse({ modelChecksum: "sha256:" + "a".repeat(64) }).success).toBe(true);
   });
 });

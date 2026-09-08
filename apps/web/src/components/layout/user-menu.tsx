@@ -14,8 +14,8 @@ import {
 export function UserMenu({ userName, userRole }: { userName: string; userRole: string }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="text-right outline-none">
-        <div className="text-sm font-medium leading-none">{userName}</div>
+      <DropdownMenuTrigger className="min-w-0 rounded text-right outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <div className="max-w-48 truncate text-sm font-medium leading-none">{userName}</div>
         <div className="text-xs text-muted-foreground">{userRole}</div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

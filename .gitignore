@@ -13,10 +13,14 @@ out/
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 .venv/
 venv/
 *.egg-info/
+
+# Generated plotting caches (dataset artifacts remain versionable)
+datasets/.matplotlib-cache/
 
 # ML artifacts (keep metadata, ignore large binaries if desired)
 services/predictive-ai/models/*.joblib

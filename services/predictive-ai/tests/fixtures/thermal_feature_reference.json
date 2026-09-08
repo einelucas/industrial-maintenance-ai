@@ -1,0 +1,24 @@
+{
+  "attentionThresholdC": 10,
+  "readings": [
+    {"measuredAt":"2026-01-01T00:00:00Z","temperatureMaxC":30,"deltaTC":2,"currentA":10,"loadPercent":50,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T00:30:00Z","temperatureMaxC":31,"deltaTC":3,"currentA":11,"loadPercent":51,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T01:00:00Z","temperatureMaxC":32,"deltaTC":4,"currentA":12,"loadPercent":52,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T01:30:00Z","temperatureMaxC":33,"deltaTC":5,"currentA":13,"loadPercent":53,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T02:00:00Z","temperatureMaxC":34,"deltaTC":6,"currentA":14,"loadPercent":54,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T02:30:00Z","temperatureMaxC":35,"deltaTC":7,"currentA":15,"loadPercent":55,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T03:00:00Z","temperatureMaxC":36,"deltaTC":8,"currentA":16,"loadPercent":56,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T03:30:00Z","temperatureMaxC":37,"deltaTC":9,"currentA":17,"loadPercent":57,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T04:00:00Z","temperatureMaxC":38,"deltaTC":10,"currentA":18,"loadPercent":58,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T04:30:00Z","temperatureMaxC":39,"deltaTC":11,"currentA":19,"loadPercent":59,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T05:00:00Z","temperatureMaxC":40,"deltaTC":12,"currentA":20,"loadPercent":60,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T05:30:00Z","temperatureMaxC":41,"deltaTC":13,"currentA":21,"loadPercent":61,"signalQuality":0.9},
+    {"measuredAt":"2026-01-01T06:00:00Z","temperatureMaxC":42,"deltaTC":14,"currentA":22,"loadPercent":62,"signalQuality":0.9}
+  ],
+  "expected": {
+    "mean5mC":42,"mean5mSampleCount":1,"mean15mC":42,"mean15mSampleCount":1,"mean60mC":41.5,"mean60mSampleCount":2,
+    "max1hC":42,"max6hC":42,"max24hC":42,"trendCPerHour":2,"trendSampleCount":2,"timeAboveLimitMin":90,"consecutiveAnomalousCount":4,
+    "minutesSinceLastValidReading":30,"baselineMeanC":35.5,"baselineStdDevC":3.605551275463989,"baselineSampleCount":12,
+    "avgLoadPercent":55.5,"avgCurrentA":15.5,"aggregatedSignalQuality":0.9,"totalHistorySampleCount":12,"sufficientForInference":true
+  }
+}

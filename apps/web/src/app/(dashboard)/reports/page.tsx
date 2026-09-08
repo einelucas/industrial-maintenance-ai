@@ -110,30 +110,8 @@ export default async function ReportsPage() {
           </form>
         </ReportCard>
 
-        <ReportCard title="Relatório preditivo" description="Predições e alertas gerados pela IA em um período.">
-          <form action="/api/reports/predictive" method="GET" target="_blank" className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="predictive-start">De</Label>
-                <Input id="predictive-start" name="start" type="date" required defaultValue={defaultStart} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="predictive-end">Até</Label>
-                <Input id="predictive-end" name="end" type="date" required defaultValue={defaultEnd} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="predictive-risk">Nível de risco</Label>
-              <Select id="predictive-risk" name="riskLevel" defaultValue="">
-                <option value="">Todos</option>
-                <option value="LOW">Baixo</option>
-                <option value="MODERATE">Moderado</option>
-                <option value="HIGH">Alto</option>
-                <option value="CRITICAL">Crítico</option>
-              </Select>
-            </div>
-            <Button type="submit" variant="outline">Baixar PDF</Button>
-          </form>
+        <ReportCard title="Relatório preditivo térmico" description="Aguardando a integração do modelo real e os relatórios da Etapa 10.">
+          <p className="text-sm text-muted-foreground">Evidências individuais disponíveis no monitoramento térmico. Nenhum relatório mecânico é reutilizado como resultado termográfico.</p>
         </ReportCard>
       </div>
     </div>

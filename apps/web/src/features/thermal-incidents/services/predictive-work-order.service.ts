@@ -4,6 +4,8 @@ import { generateWorkOrderNumber } from "@/features/work-orders/services/work-or
 import { resolveEquipmentIdFromPoint } from "@/features/ai-core/services/resolve-equipment-for-point";
 import { aiCoreStateService } from "@/features/ai-core/services/ai-core-state.service";
 import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { predictionEvidenceInclude } from "@/features/thermal-monitoring/repositories/thermal-monitoring.repository";
+import { isTraceablePrediction } from "@/features/thermal-monitoring/services/thermal-presentation";
 
 // Fluxo DEDICADO de OS preditiva térmica (GPMS 2026 / Etapa 5) — completamente
 // separado de `alertService.convertToWorkOrder()` (fluxo mecânico legado,
@@ -25,7 +27,7 @@ export const predictiveWorkOrderService = {
       where: { id: input.thermalIncidentId },
       include: {
         thermalPoint: { include: { component: { include: { panel: true } } } },
-        triggerPrediction: true,
+        triggerPrediction: { include: predictionEvidenceInclude },
       },
     });
     if (!incident) throw new NotFoundError("Incidente térmico", input.thermalIncidentId);
@@ -38,12 +40,12 @@ export const predictiveWorkOrderService = {
     if (incident.workOrderId) {
       throw new ConflictError("Este incidente já possui uma ordem de serviço vinculada.");
     }
-    if (!incident.triggerPrediction) {
+    if (!incident.triggerPrediction || !isTraceablePrediction(incident.triggerPrediction)) {
       throw new ValidationError("Incidente sem Prediction de origem — não é possível criar OS preditiva.");
     }
 
     const aiState = await aiCoreStateService.getState();
-    if (aiState.status === "AI_CORE_UNAVAILABLE") {
+    if (aiState.status !== "READY") {
       throw new ValidationError("Núcleo de IA térmica indisponível — criação de OS preditiva bloqueada até a IA voltar a ficar pronta.");
     }
 
@@ -62,6 +64,14 @@ export const predictiveWorkOrderService = {
     const number = await generateWorkOrderNumber();
 
     return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${incident.thermalPointId}))`;
+      // A confirmação pode ter sido revogada desde o carregamento da tela.
+      // A reserva condicional também impede duas OS para o mesmo incidente.
+      const reserved = await tx.thermalIncident.updateMany({
+        where: { id: incident.id, status: "HUMAN_CONFIRMED", humanReviewDecision: "CONFIRMED", workOrderId: null, updatedAt: incident.updatedAt },
+        data: { status: "WORK_ORDER_CREATED" },
+      });
+      if (reserved.count !== 1) throw new ConflictError("O incidente foi atualizado ou já possui uma OS. Recarregue a página.");
       const workOrder = await tx.workOrder.create({
         data: {
           number,

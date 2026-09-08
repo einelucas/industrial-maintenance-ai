@@ -11,6 +11,7 @@ export const HUMAN_REVIEW_DECISIONS = ["CONFIRMED", "REJECTED", "INCONCLUSIVE", 
 export const humanReviewDecisionSchema = z
   .object({
     thermalIncidentId: z.string().uuid("Incidente térmico inválido."),
+    expectedPredictionId: z.string().uuid("Predição revisada inválida.").optional(),
     decision: z.enum(HUMAN_REVIEW_DECISIONS, { errorMap: () => ({ message: "Selecione uma decisão válida." }) }),
     justification: z
       .string()

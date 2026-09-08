@@ -45,18 +45,18 @@ export type ThermalInferenceResponse = z.infer<typeof thermalInferenceResponseSc
 export const thermalReadinessResponseSchema = z
   .object({
     status: z.string().optional(),
+    ready: z.boolean().optional(),
     modelLoaded: z.boolean().optional(),
     predictorType: z.string().optional(),
     modelStage: z.string().nullable().optional(),
     modelVersion: z.string().nullable().optional(),
-    modelChecksum: z.string().nullable().optional(),
+    modelChecksum: z.string().regex(/^sha256:[a-f0-9]{64}$/i).nullable().optional(),
+    isSyntheticModel: z.boolean().nullable().optional(),
+    featureVersion: z.string().nullable().optional(),
+    reason: z.string().nullable().optional(),
   })
-  // `.passthrough()` deliberado: o health check hoje responde pelo contrato
-  // MECÂNICO antigo (predictorType "demo"/"sklearn", sem modelStage térmico
-  // nenhum) — não queremos que a validação de FORMATO estoure; a decisão de
-  // "pronto" é sempre feita depois, em cima de checks explícitos
-  // (`predictorType === "thermal"`, `modelStage` permitido, etc.), nunca
-  // pela mera capacidade de fazer parse do JSON.
+  // `.passthrough()` mantém compatibilidade de leitura com o health geral;
+  // readiness térmica ainda exige explicitamente todos os campos abaixo.
   .passthrough();
 
 export type ThermalReadinessResponse = z.infer<typeof thermalReadinessResponseSchema>;

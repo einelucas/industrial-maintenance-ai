@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "development"
-    model_path: str = "models/model.joblib"
+    thermal_model_path: str = "models/thermal_model.joblib"
+    thermal_model_metadata_path: str = "models/metadata.json"
     ai_service_api_key: str = "change-me-in-local-env"
     cors_origins: str = "http://localhost:3000"
 
@@ -28,7 +29,14 @@ class Settings(BaseSettings):
 
     @property
     def resolved_model_path(self) -> Path:
-        path = Path(self.model_path)
+        path = Path(self.thermal_model_path)
+        if not path.is_absolute():
+            path = BASE_DIR / path
+        return path
+
+    @property
+    def resolved_metadata_path(self) -> Path:
+        path = Path(self.thermal_model_metadata_path)
         if not path.is_absolute():
             path = BASE_DIR / path
         return path

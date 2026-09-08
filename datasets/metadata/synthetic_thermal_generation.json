@@ -1,0 +1,468 @@
+{
+  "artifacts": {
+    "reserved_plant_scenario.csv": "c7fa81f5946236055821ada21787432239476c85518fe593f4c4b39b880bafe9",
+    "reserved_plant_scenario.parquet": "a03835d04cea41f74c4d6fa02eaa08816628b5299f05484a3aa35b9dc6045751",
+    "synthetic_thermal_timeseries.csv": "81a738b1aaa9ee745e7547e5fb3e322b2493bc075197a1d809f354df68a9aa73"
+  },
+  "columns": [
+    {
+      "description": "Instante da medição.",
+      "dtype": "datetime64[ns, UTC]",
+      "name": "timestamp",
+      "nullable": false,
+      "role": "identity",
+      "unit": "UTC"
+    },
+    {
+      "description": "Planta sintética.",
+      "dtype": "string",
+      "name": "plant_id",
+      "nullable": false,
+      "role": "identity",
+      "unit": null
+    },
+    {
+      "description": "Setor sintético.",
+      "dtype": "string",
+      "name": "sector_id",
+      "nullable": false,
+      "role": "identity",
+      "unit": null
+    },
+    {
+      "description": "Família do equipamento.",
+      "dtype": "string",
+      "name": "equipment_type",
+      "nullable": false,
+      "role": "context",
+      "unit": null
+    },
+    {
+      "description": "Painel persistente.",
+      "dtype": "string",
+      "name": "panel_id",
+      "nullable": false,
+      "role": "identity",
+      "unit": null
+    },
+    {
+      "description": "Componente persistente.",
+      "dtype": "string",
+      "name": "component_id",
+      "nullable": false,
+      "role": "identity",
+      "unit": null
+    },
+    {
+      "description": "Ponto persistente.",
+      "dtype": "string",
+      "name": "thermal_point_id",
+      "nullable": false,
+      "role": "identity",
+      "unit": null
+    },
+    {
+      "description": "Tipo do componente Prisma.",
+      "dtype": "category",
+      "name": "component_type",
+      "nullable": false,
+      "role": "context",
+      "unit": null
+    },
+    {
+      "description": "Máxima medida; nula sem comunicação.",
+      "dtype": "float64",
+      "name": "temperature_max_c",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "degC"
+    },
+    {
+      "description": "Média térmica da ROI.",
+      "dtype": "float64",
+      "name": "temperature_average_c",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "degC"
+    },
+    {
+      "description": "Ambiente com ciclo diário.",
+      "dtype": "float64",
+      "name": "ambient_temperature_c",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "degC"
+    },
+    {
+      "description": "Ponto/fase saudável equivalente.",
+      "dtype": "float64",
+      "name": "reference_temperature_c",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "degC"
+    },
+    {
+      "description": "Máxima menos referência.",
+      "dtype": "float64",
+      "name": "delta_t_c",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "degC"
+    },
+    {
+      "description": "Corrente elétrica.",
+      "dtype": "float64",
+      "name": "current_a",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "A"
+    },
+    {
+      "description": "Carga nominal.",
+      "dtype": "float64",
+      "name": "load_percent",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "%"
+    },
+    {
+      "description": "Emissividade usada na medição.",
+      "dtype": "float64",
+      "name": "emissivity",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "ratio"
+    },
+    {
+      "description": "Qualidade de 0 a 1.",
+      "dtype": "float64",
+      "name": "signal_quality",
+      "nullable": true,
+      "role": "feature_source",
+      "unit": "ratio"
+    },
+    {
+      "description": "ONLINE, DEGRADED ou OFFLINE.",
+      "dtype": "category",
+      "name": "communication_state",
+      "nullable": false,
+      "role": "quality",
+      "unit": null
+    },
+    {
+      "description": "OFF, RUNNING ou MAINTENANCE.",
+      "dtype": "category",
+      "name": "operating_state",
+      "nullable": false,
+      "role": "context",
+      "unit": null
+    },
+    {
+      "description": "Ground truth offline; nunca enviado à inferência.",
+      "dtype": "category",
+      "name": "failure_mode",
+      "nullable": false,
+      "role": "target",
+      "unit": null
+    },
+    {
+      "description": "Episódio anormal ativo.",
+      "dtype": "bool",
+      "name": "anomaly_active",
+      "nullable": false,
+      "role": "target",
+      "unit": null
+    },
+    {
+      "description": "Intervenção prevista pelo simulador.",
+      "dtype": "bool",
+      "name": "maintenance_required",
+      "nullable": false,
+      "role": "target",
+      "unit": null
+    },
+    {
+      "description": "Evento confirmado nas próximas 24 h.",
+      "dtype": "bool",
+      "name": "failure_within_24h",
+      "nullable": false,
+      "role": "target",
+      "unit": null
+    },
+    {
+      "description": "Evento confirmado nos próximos 7 dias.",
+      "dtype": "bool",
+      "name": "failure_within_7d",
+      "nullable": false,
+      "role": "target",
+      "unit": null
+    },
+    {
+      "description": "Episódio sintético para auditoria, excluído das features.",
+      "dtype": "string",
+      "name": "episode_id",
+      "nullable": true,
+      "role": "audit",
+      "unit": null
+    },
+    {
+      "description": "Somente auditoria de target; excluído das features.",
+      "dtype": "float64",
+      "name": "hours_to_event",
+      "nullable": true,
+      "role": "audit",
+      "unit": "h"
+    }
+  ],
+  "contractVersion": "thermal-dataset-v1",
+  "development": {
+    "episodes": 165,
+    "period": [
+      "2026-01-01T00:00:00Z",
+      "2026-03-31T23:30:00Z"
+    ],
+    "points": 55,
+    "rows": 237600
+  },
+  "featureColumns": [
+    "temperature_max_c",
+    "temperature_average_c",
+    "ambient_temperature_c",
+    "reference_temperature_c",
+    "delta_t_c",
+    "current_a",
+    "load_percent",
+    "signal_quality",
+    "mean_5m_c",
+    "mean_5m_sample_count",
+    "mean_15m_c",
+    "mean_15m_sample_count",
+    "mean_60m_c",
+    "mean_60m_sample_count",
+    "max_1h_c",
+    "max_6h_c",
+    "max_24h_c",
+    "trend_c_per_hour",
+    "trend_sample_count",
+    "minutes_above_limit",
+    "consecutive_anomalies",
+    "minutes_since_last_valid_reading",
+    "baseline_mean_c",
+    "baseline_stddev_c",
+    "baseline_sample_count",
+    "baseline_sufficient",
+    "average_load_percent",
+    "average_current_a",
+    "total_history_sample_count",
+    "aggregated_signal_quality"
+  ],
+  "featureVersion": "thermal-features-v1",
+  "generatedAtPolicy": "Deterministic artifacts: no wall-clock timestamps in manifests.",
+  "industrialEfficacyClaim": false,
+  "periods": {
+    "demo": [
+      "2026-08-29T07:00:00Z",
+      "2026-09-03T18:00:00Z"
+    ],
+    "development": [
+      "2026-01-01T00:00:00Z",
+      "2026-03-31T23:30:00Z"
+    ],
+    "test": [
+      "2026-03-02T00:00:00Z",
+      "2026-03-31T23:30:00Z"
+    ],
+    "train": [
+      "2026-01-01T00:00:00Z",
+      "2026-02-15T23:30:00Z"
+    ],
+    "validation": [
+      "2026-02-16T00:00:00Z",
+      "2026-03-01T23:30:00Z"
+    ]
+  },
+  "reservedScenario": {
+    "anomalousPointCount": 19,
+    "criticalRows": 1,
+    "excludedFromDevelopment": true,
+    "identitySeed": 20260903,
+    "period": [
+      "2026-08-29T07:00:00Z",
+      "2026-09-03T18:00:00Z"
+    ],
+    "points": 55,
+    "rows": 14465,
+    "seriesSeed": 356194
+  },
+  "sampleIntervalMinutes": 30,
+  "seeds": {
+    "demo_identity": 20260903,
+    "demo_series": 356194,
+    "development": 20260701,
+    "split": 20260702
+  },
+  "splits": {
+    "artifacts": {
+      "thermal_test_windows.parquet": "ead53b8b77ce920af746bc03116f18869626b211d8a71faa9cc411d49fd1e02f",
+      "thermal_training_windows.parquet": "449915f166971bcd3a796e44133f43773b66d8458f85018158ed5906f44a713a",
+      "thermal_validation_windows.parquet": "22da5617b7d63d1f044a4ae8e6b3a46b36bd77be5a4571543dc4c13cbbd5587a"
+    },
+    "finalTestPolicy": "Never used for feature/model selection.",
+    "panelGroups": {
+      "test": [
+        "DEV-PNL-004",
+        "DEV-PNL-005",
+        "DEV-PNL-022",
+        "DEV-PNL-023"
+      ],
+      "train": [
+        "DEV-PNL-001",
+        "DEV-PNL-002",
+        "DEV-PNL-003",
+        "DEV-PNL-006",
+        "DEV-PNL-008",
+        "DEV-PNL-009",
+        "DEV-PNL-012",
+        "DEV-PNL-013",
+        "DEV-PNL-014",
+        "DEV-PNL-015",
+        "DEV-PNL-016",
+        "DEV-PNL-017",
+        "DEV-PNL-018",
+        "DEV-PNL-019",
+        "DEV-PNL-020",
+        "DEV-PNL-021",
+        "DEV-PNL-026",
+        "DEV-PNL-027"
+      ],
+      "validation": [
+        "DEV-PNL-007",
+        "DEV-PNL-010",
+        "DEV-PNL-011",
+        "DEV-PNL-024",
+        "DEV-PNL-025",
+        "DEV-PNL-028"
+      ]
+    },
+    "strategy": "chronological boundaries plus mutually exclusive panel groups",
+    "summaries": {
+      "test": {
+        "panels": 4,
+        "period": [
+          "2026-03-02T00:00:00Z",
+          "2026-03-31T23:30:00Z"
+        ],
+        "points": 8,
+        "rows": 11472,
+        "targetDistribution": {
+          "failure_within_24h": {
+            "false": 11031,
+            "true": 441
+          },
+          "failure_within_7d": {
+            "false": 9103,
+            "true": 2369
+          },
+          "maintenance_required": {
+            "false": 10849,
+            "true": 623
+          }
+        }
+      },
+      "train": {
+        "panels": 18,
+        "period": [
+          "2026-01-01T00:00:00Z",
+          "2026-02-15T23:30:00Z"
+        ],
+        "points": 36,
+        "rows": 78774,
+        "targetDistribution": {
+          "failure_within_24h": {
+            "false": 76113,
+            "true": 2661
+          },
+          "failure_within_7d": {
+            "false": 61101,
+            "true": 17673
+          },
+          "maintenance_required": {
+            "false": 74909,
+            "true": 3865
+          }
+        }
+      },
+      "validation": {
+        "panels": 6,
+        "period": [
+          "2026-02-16T00:00:00Z",
+          "2026-03-01T23:30:00Z"
+        ],
+        "points": 11,
+        "rows": 7338,
+        "targetDistribution": {
+          "failure_within_24h": {
+            "false": 7142,
+            "true": 196
+          },
+          "failure_within_7d": {
+            "false": 6143,
+            "true": 1195
+          },
+          "maintenance_required": {
+            "false": 6937,
+            "true": 401
+          }
+        }
+      }
+    }
+  },
+  "syntheticData": true,
+  "targetColumns": [
+    "failure_mode",
+    "anomaly_active",
+    "maintenance_required",
+    "failure_within_24h",
+    "failure_within_7d"
+  ],
+  "targets": {
+    "primary": {
+      "column": "failure_within_24h",
+      "horizonHours": 24
+    },
+    "secondary": {
+      "column": "failure_within_7d",
+      "horizonHours": 168
+    }
+  },
+  "validation": {
+    "artifacts": {
+      "dataset_validation_report.json": "e360b07cf9b0dbd61fe4a5d15b4eb85f0295d9f92de088e47a2a4dcda3a9fe17",
+      "reserved_plant_scenario.csv": "c7fa81f5946236055821ada21787432239476c85518fe593f4c4b39b880bafe9",
+      "reserved_plant_scenario.parquet": "a03835d04cea41f74c4d6fa02eaa08816628b5299f05484a3aa35b9dc6045751",
+      "synthetic_thermal_timeseries.csv": "81a738b1aaa9ee745e7547e5fb3e322b2493bc075197a1d809f354df68a9aa73",
+      "thermal_test_windows.parquet": "ead53b8b77ce920af746bc03116f18869626b211d8a71faa9cc411d49fd1e02f",
+      "thermal_training_windows.parquet": "449915f166971bcd3a796e44133f43773b66d8458f85018158ed5906f44a713a",
+      "thermal_validation_windows.parquet": "22da5617b7d63d1f044a4ae8e6b3a46b36bd77be5a4571543dc4c13cbbd5587a"
+    },
+    "checks": {
+      "allSplitsContainBothClasses": true,
+      "chronologicalBoundaries": true,
+      "criticalPeakExactlyOnce": true,
+      "criticalRecoversAfterPeak": true,
+      "developmentAndDemoIdentitiesDistinct": true,
+      "developmentAndDemoPeriodsDistinct": true,
+      "developmentHas55Points": true,
+      "featuresExcludeTargets": true,
+      "finalTestNotUsedForModelSelection": true,
+      "mlBaselineNotPerfect": true,
+      "panelsDisjoint": true,
+      "pointsDisjoint": true,
+      "reservedHas19AnomalousPoints": true,
+      "reservedHas55Points": true,
+      "seedsDistinct": true,
+      "simpleRuleNotPerfect": true
+    },
+    "result": "PASS"
+  }
+}

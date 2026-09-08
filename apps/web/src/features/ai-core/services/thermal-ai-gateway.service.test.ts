@@ -59,11 +59,14 @@ function validRequest(): ThermalInferenceRequest {
 
 const READY_HEALTH_BODY = {
   status: "ok",
+  ready: true,
   modelLoaded: true,
   predictorType: "thermal",
   modelStage: "SYNTHETIC_EXPERIMENTAL",
   modelVersion: "thermal-synth-2026.09.01",
   modelChecksum: "sha256:" + "a".repeat(64),
+  isSyntheticModel: true,
+  featureVersion: "thermal-features-v1",
 };
 
 const VALID_PREDICTION_BODY = {
@@ -101,7 +104,7 @@ describe("thermalAiGateway.checkReadiness", () => {
     expect(result.modelStage).toBe("SYNTHETIC_EXPERIMENTAL");
   });
 
-  it("devolve ready:false quando o preditor é o mecânico (demo/sklearn) — estado real do FastAPI deste repositório hoje", async () => {
+  it("devolve ready:false quando o preditor é o mecânico (demo/sklearn)", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ status: "ok", modelLoaded: true, predictorType: "sklearn" }));
     const result = await thermalAiGateway.checkReadiness();
     expect(result.ready).toBe(false);
@@ -118,6 +121,15 @@ describe("thermalAiGateway.checkReadiness", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ ...READY_HEALTH_BODY, modelLoaded: false }));
     const result = await thermalAiGateway.checkReadiness();
     expect(result.ready).toBe(false);
+  });
+
+  it("devolve ready:false sem checksum ou com feature version incompatível", async () => {
+    const { modelChecksum, ...withoutChecksum } = READY_HEALTH_BODY;
+    void modelChecksum;
+    fetchMock.mockResolvedValueOnce(jsonResponse(withoutChecksum));
+    expect((await thermalAiGateway.checkReadiness()).ready).toBe(false);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ...READY_HEALTH_BODY, featureVersion: "thermal-features-v0" }));
+    expect((await thermalAiGateway.checkReadiness()).ready).toBe(false);
   });
 
   it("devolve ready:false em erro HTTP", async () => {

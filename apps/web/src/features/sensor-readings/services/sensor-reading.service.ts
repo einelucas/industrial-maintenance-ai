@@ -3,6 +3,7 @@ import { sensorReadingSchema } from "@/features/sensor-readings/schemas/sensor-r
 import { sensorReadingCsvRowSchema, type SensorReadingCsvImportResult } from "@/features/sensor-readings/schemas/sensor-reading-csv-row.schema";
 import { predictionService } from "@/features/predictions/services/prediction.service";
 import { ValidationError } from "@/lib/errors";
+import { assertMechanicalWorkflowAvailable } from "@/features/predictions/services/legacy-mechanical-gate";
 
 export const sensorReadingService = {
   /**
@@ -12,6 +13,7 @@ export const sensorReadingService = {
    * UI informar que o serviço preditivo está indisponível (seção 38).
    */
   async recordAndPredict(input: unknown) {
+    assertMechanicalWorkflowAvailable();
     const parsed = sensorReadingSchema.safeParse(input);
     if (!parsed.success) {
       throw new ValidationError("Dados da medição inválidos.", parsed.error.flatten().fieldErrors);
@@ -45,6 +47,7 @@ export const sensorReadingService = {
    * derrubar o restante do lote.
    */
   async importCsv(equipmentId: string, rows: unknown[]): Promise<SensorReadingCsvImportResult> {
+    assertMechanicalWorkflowAvailable();
     const validRows: { measuredAt: Date; temperature?: number; vibration?: number; pressure?: number; rpm?: number; current?: number; torque?: number; operatingHours?: number }[] = [];
     const errors: { row: number; message: string }[] = [];
 

@@ -398,6 +398,151 @@ Migration aditiva cria `InferenceRequest` (`inferenceRequestId` único e determi
 
 Migrations aplicadas em duas partes por exigência do próprio Postgres (`ALTER TYPE ... ADD VALUE` não pode ser usado na mesma transação que o consome): `20260904120419_add_incident_status_review_values` (só os 5 novos valores do enum) e `20260904120508_add_ai_core_orchestration` (tudo o resto — colunas, `HumanReview`, `InferenceRequest`, índices, FKs). A primeira tentativa de aplicar tudo numa única migration falhou exatamente como o Postgres documenta (`unsafe use of new value` / `55P04`); resolvida com `prisma migrate resolve --rolled-back` (a transação abortou sozinha, sem deixar nada parcialmente aplicado) e a migration recriada em duas partes.
 
-## Limitação conhecida deste ambiente de construção
+## Interface operacional termográfica (GPMS 2026 / Adequação Etapa 6)
+
+Implementação iniciada em **08/09/2026**, consumindo o prompt versionado em `docs/prompts/etapa-6-interface-termografica.md`. As telas e os bloqueios estão implementados; a etapa permanece **em validação**, sem declarar concluída a demonstração ponta a ponta com o modelo real da Etapa 8.
+
+### Interface e consultas
+
+- `/thermal-monitoring` é a entrada após login e recebe somente registros do PostgreSQL. Exibe pontos ativos, fila por estado de análise, máximas observadas entre as últimas leituras, data/idade da inferência, conectividade e incidentes registrados. Filtros de código/nome, setor, equipamento, painel, componente, risco e conectividade combinam-se por interseção. O resumo permanece global; a lista informa quantos pontos correspondem aos filtros.
+- `/thermal-monitoring/points/[id]` apresenta hierarquia, leitura atual, série de até 240 leituras, temperatura/referência/ΔT, corrente e carga no mesmo intervalo, limite absoluto de engenharia, tabela com IDs de todas as amostras exibidas, até 30 predições rastreáveis, incidentes, OS, configuração e calibração. Dados ausentes permanecem ausentes; limites não classificam defeitos.
+- `/thermal-incidents` lista registros com filtros e paginação de 24 itens. `/thermal-incidents/[id]` mostra a evidência de origem e a mais recente, picos persistidos, recomendação, quatro decisões humanas, justificativa, histórico imutável e criação autorizada de OS. A linha do tempo combina abertura, revisões, histórico da OS e normalização já registrada. A série pós-ação não produz normalização automática.
+- Painéis e cadastros de pontos oferecem links ao monitoramento. `/settings/thermal-risk` reutiliza a configuração térmica existente. Navegação mobile, carregamento, estados vazios, erros e banner global da IA foram adicionados; valores não dependem exclusivamente de cores.
+
+### Proveniência, risco e dados sintéticos
+
+`isTraceablePrediction` reaproveita o contrato da resposta da Etapa 5 e confere o vínculo entre Prediction, leitura e InferenceRequest concluída: IDs do ponto/leitura/predição, versão de features, requisição, estágio permitido e checksum. A ordenação usa a data da leitura, depois a data de inferência, para que backfill de uma leitura antiga não substitua uma análise de leitura mais recente.
+
+O risco **atual** só aparece quando a IA está `READY`, a última leitura está `ANALYZED` e sua Prediction tem proveniência válida. Uma leitura nova pendente não herda o risco da anterior. Sem IA pronta, contagens de risco aparecem como indisponíveis; a ausência de análise nunca vira normalidade. Evidências anteriores podem ser consultadas como histórico identificado.
+
+`initiallyAnomalous` aparece somente como fato da inspeção original. Leituras com `source = SIMULATOR` recebem a identificação **dados sintéticos**; modelos `SYNTHETIC_EXPERIMENTAL` informam treinamento sintético. Nenhum manifesto de cenário ou fixture de teste é importado pelo runtime operacional.
+
+Conectividade é independente do risco: pontos manuais/CSV/simulados não são tratados como sensores offline. Para coleta física, o último contato tem tolerância de três intervalos de amostragem e respeita o estado cadastrado do dispositivo. Dispositivos desativados/em manutenção não contam como operacionais. Isso é uma política de apresentação; a ingestão física permanece na Etapa 9.
+
+### Ações e encerramento dos atalhos mecânicos
+
+As forms reutilizam as Server Actions da Etapa 5 e as policies existentes. A revisão agora envia a Prediction exibida (`expectedPredictionId`) e rejeita mudanças de evidência durante a submissão. O servidor exige proveniência válida e impede revisão de ciclo encaminhado à manutenção/encerrado. **A revisão humana de evidência já persistida permanece permitida mesmo sem IA**, conforme a exceção explícita da Etapa 5; ela não cria uma inferência nem autoriza uma OS automaticamente. Revisão e criação de OS utilizam o lock por ponto já adotado na consolidação do incidente. A criação de OS reserva condicionalmente o estado confirmado dentro da transação, impedindo duplicação e autorização revogada entre consulta e gravação. `DEGRADED`, assim como indisponibilidade, bloqueia novas OS; apenas `READY` permite criá-las.
+
+`/dashboard` e `/predictive-maintenance` redirecionam ao monitoramento térmico; `/alerts` redireciona a incidentes e `/settings` à configuração térmica. Os formulários mecânicos e o card genérico de risco foram retirados do detalhe do equipamento. A entrada de leituras/inferência mecânica e a conversão legada de alertas em OS foram bloqueadas também no servidor, para que clientes antigos não contornem a revisão humana. O endpoint de PDF preditivo mecânico retorna indisponibilidade explícita; o relatório térmico continua na Etapa 10. Os artefatos de ML antigos permanecem preservados.
+
+Consulta e execução de OS continuam disponíveis; os atalhos principais de criação levam aos incidentes. As rotas administrativas legadas de PCM e o formulário genérico de OS não preditiva permanecem no código, sem habilitar `PREDICTIVE`; a remoção definitiva desses módulos não foi executada nesta etapa.
+
+### Verificação executada
+
+- Suíte unitária: **322 testes**, incluindo **34** de apresentação/filtros/conectividade e **22** de revisão/OS/bloqueios no servidor. Fixtures somente em testes com Prisma mockado, sem escrita no banco demonstrativo.
+- Typecheck e lint sem erros. Comandos equivalentes locais: `node node_modules/typescript/bin/tsc --noEmit`, `node node_modules/next/dist/bin/next lint` e `node node_modules/vitest/vitest.mjs run --exclude '**/*.integration.test.ts'`, dentro de `apps/web`.
+- Build de produção compilou as novas rotas e gerou as páginas com sucesso, em `.next/thermal-stage6-build`, separado do cache principal. Houve avisos do `bcryptjs` usado pela autenticação existente sobre APIs Node no Edge Runtime. A configuração temporária usada para isolar o build foi restaurada.
+- Consultas **somente leitura**, executando os repositories novos contra o banco configurado, confirmaram: **55 pontos**, **19 anomalias históricas**, **55 últimas leituras**, **6.600 leituras `PENDING_AI`**, **0 predições**, **0 incidentes abertos** e gateway **não pronto**. O detalhe do TP-039 retornou suas **120 leituras**, mantendo a última medição em **75,6 °C / referência 40,0 °C / ΔT 35,6 °C**. Nenhum reset, seed, migration ou backfill foi executado.
+- `pnpm` não conseguiu verificar/obter sua versão pelo registro neste ambiente; os binários já instalados foram usados diretamente. O sandbox bloqueou subprocessos do esbuild inicialmente; a suíte unitária foi executada com a permissão de execução aprovada, excluindo explicitamente integração com banco.
+
+### Pendências antes de encerrar a etapa
+
+- Validação visual em desktop/mobile, navegação por teclado e fluxo autenticado por perfil: o Browser da sessão retornou `No browser is available` e lista vazia. Não foram geradas capturas nem alegada validação visual.
+- Executar o fluxo de decisão/OS em navegador com uma inferência térmica real após a Etapa 8; não há incidente real para demonstrar hoje. Os testes unitários não substituem essa evidência.
+- Reexecutar a integração PostgreSQL de revisão/OS com as novas guardas em banco de teste isolado. A verificação desta sessão no banco demonstrativo foi exclusivamente de leitura.
+- Normalização pós-ação e relatórios completos continuam dependentes das próximas etapas. Paginação/janela histórica além dos limites explicitados nas telas é uma evolução futura.
+
+## Dataset sintético temporal (GPMS 2026 / Adequação Etapa 7)
+
+A Etapa 7 foi executada em **08/09/2026** a partir do prompt versionado em `docs/prompts/etapa-7-dataset-termico-temporal.md`. Ela entrega o conjunto experimental para a Etapa 8 sem treinar, selecionar ou promover um modelo operacional. O pipeline é independente do AI4I e o manifesto declara `syntheticData: true` e `industrialEfficacyClaim: false`.
+
+### Contrato, simulação e separação
+
+`thermal_dataset_contract.py` centraliza versão, colunas, tipos, unidades, nulabilidade, features `thermal-features-v1`, targets, períodos e seeds. As séries usam UTC e amostras a cada 30 minutos. Esse intervalo permite reproduzir a janela estrita de tendência de 60 minutos da Etapa 5 com mais de uma amostra. O alvo primário é falha em 24 horas e o secundário é falha em 7 dias.
+
+O gerador produz 237.600 linhas de desenvolvimento para 55 pontos entre janeiro e março de 2026. Ele combina ciclo ambiente, turnos, carga, inércia térmica, baseline por componente, ruído, qualidade e falhas curtas de comunicação. Episódios cobrem conexão frouxa, resistência elevada, sobrecarga, desequilíbrio, contato degradado, ventilação do painel, relé degradado, erro de sensor e recuperação pós-manutenção.
+
+`build_thermal_windows.py` não transforma comunicação `OFFLINE` em zero: a amostra fica ausente. Cada feature usa somente timestamps até o cutoff, e um teste de mutação futura confirma que acrescentar uma leitura posterior não altera a janela anterior. Linhas sem baseline/tendência suficiente ficam fora do conjunto modelável. O split combina fronteiras cronológicas e grupos de painéis mutuamente exclusivos:
+
+| Split | Período | Painéis | Pontos | Linhas | Positivos em 24 h |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Treino | 01/01–15/02/2026 | 18 | 36 | 78.774 | 2.661 |
+| Validação | 16/02–01/03/2026 | 6 | 11 | 7.338 | 196 |
+| Teste final | 02/03–31/03/2026 | 4 | 8 | 11.472 | 441 |
+
+O avaliador abre somente treino e validação. A regressão logística offline obteve PR-AUC 0,2681, ROC-AUC 0,8957 e F1 0,1530; a regra simples obteve PR-AUC 0,0648 e F1 0,0667. Nenhuma reconstruiu perfeitamente o target. Esses números caracterizam o dado sintético e procuram vazamento; não medem desempenho industrial e não elegem o modelo da Etapa 8.
+
+### Cenário GPMS reservado e carregamento seguro
+
+O cenário em `datasets/demo/` usa identidades, período e seeds separados do desenvolvimento. Ele tem 14.465 linhas, 55 pontos, exatamente 19 pontos anormais, uma ocorrência de TP-039 em 75,6 °C contra referência de 40,0 °C (ΔT 35,6 °C) e uma série posterior de recuperação. O `ground truth` permanece nos arquivos de treino/avaliação e não é importado por `services/predictive-ai/app` nem por `apps/web/src`.
+
+`apps/web/scripts/load-reserved-thermal-scenario.ts` valida o SHA-256 e o isolamento registrado no manifesto, remove colunas de target, descarta linhas `OFFLINE` e chama exclusivamente `thermalReadingService.ingestBatchByCode(..., "SIMULATOR")`. Dry-run é o padrão; `--apply`, `--allow-existing` e `--include-post-action` são decisões explícitas. O carregador não chama backfill e não grava Prediction, incidente, alerta ou OS.
+
+O dry-run real contra o banco configurado passou sem escrita: 13.771 leituras pré-ação selecionadas, 34 ausências de comunicação descartadas, 6.585 timestamps já existentes e 7.186 inseríveis, com `labelsCopied: false`. A carga não foi aplicada ao banco demonstrativo compartilhado porque ele já contém o cenário da Etapa 2; o processamento completo dependerá do modelo real da Etapa 8 e deve ocorrer em banco isolado.
+
+### Artefatos e validação
+
+Um único comando, `python -m training.run_thermal_dataset_pipeline`, gera CSV/Parquet, constrói splits, compara os baselines, cria nove gráficos, valida invariantes e reescreve o manifesto. Duas execuções consecutivas produziram o mesmo SHA-256 do manifesto:
+
+```text
+8b948e4e4f64bd6fce386f4f2876f777aa48f43ee4a9d20c0d1b2bd2adb8cd98
+```
+
+As 16 verificações do validador passaram. A suíte Python passou com 12 testes; a paridade TypeScript/Python e as regras operacionais passaram com 23 testes; typecheck e lint dos arquivos novos passaram. Gráficos representativos normal, conexão frouxa, ventilação insuficiente e erro de sensor foram inspecionados visualmente. O teste final foi lido apenas pelo validador estrutural de hash, período, classes e isolamento; não foi aberto pelo avaliador de modelos.
+
+Os artefatos principais são:
+
+- `datasets/raw/synthetic_thermal_timeseries.csv`;
+- `datasets/processed/thermal_{training,validation,test}_windows.parquet`;
+- `datasets/demo/reserved_plant_scenario.{csv,parquet}`;
+- `datasets/metadata/synthetic_thermal_generation.json` e seu sidecar `.sha256`;
+- `datasets/reports/dataset_validation_report.json` e `datasets/reports/plots/`.
+
+## Modelo termográfico e FastAPI obrigatório (GPMS 2026 / Adequação Etapa 8)
+
+A implementação consumiu `docs/prompts/etapa-8-treinamento-integracao-fastapi.md` em **08/09/2026**. O serviço agora atende o contrato térmico criado na Etapa 5 e não usa o AI4I, `DemoPredictor`, resposta hardcoded ou `RULE_ONLY`. O endpoint mecânico autenticado `/api/v1/predict` responde `503`; toda inferência operacional válida passa por `/api/v1/thermal/predict`.
+
+### Treinamento, seleção e limitações
+
+`training/train_thermal_models.py` recebe caminhos de treino/validação/teste, target, seed, estágio e intervalo de treino. Ele avalia Logistic Regression, Random Forest e Gradient Boosting no conjunto de validação. O vencedor é escolhido por PR-AUC, recall, F1 e Brier; depois é calibrado por sigmoid. Isolation Forest fornece apenas 10% do score ML combinado e nunca opera sem o classificador supervisionado. Um Random Forest separado estima a causa para revisão humana.
+
+| Candidato | PR-AUC validação | ROC-AUC | F1 |
+| --- | ---: | ---: | ---: |
+| Logistic Regression | 0,2124 | 0,7838 | 0,1500 |
+| Gradient Boosting | 0,4667 | 0,9832 | 0,6145 |
+| **Random Forest** | **0,5285** | **0,9855** | **0,6483** |
+
+A configuração do vencedor e sua calibração foram congeladas antes de abrir o teste final. No teste: PR-AUC 0,4496, ROC-AUC 0,9569, F1 0,4638, precision 0,4961, recall 0,4354 e Brier 0,03186. O relatório registra métricas por componente/faixa de carga e 0,8125 falsos alertas por ponto/dia. A acurácia do classificador de causa nos episódios do teste foi apenas 0,1400; portanto a causa retornada é explicitamente uma hipótese de baixa maturidade para revisão humana. Nenhuma dessas métricas comprova eficácia industrial.
+
+O bundle publicado localmente é `models/thermal_model.joblib`, com metadados térmicos em `models/metadata.json`; os metadados mecânicos anteriores ficaram em `models/legacy_mechanical_metadata.json` como histórico inativo. A estratégia escolhida é geração obrigatória durante build controlado, sem dependência de LFS ou armazenamento externo:
+
+```text
+python -m training.train_thermal_models
+python -m training.validate_model_artifact
+```
+
+O sklearn não promete representação pickle canônica entre processos. Por isso há dois controles diferentes:
+
+- checksum bruto do artefato publicado, usado pelo runtime para detectar ausência/corrupção: `sha256:ded7ae6e80dbadefe0c2fd5419a0603c975f67b8f295299abb2b34c01f690468`;
+- fingerprint semântico sobre as saídas canônicas dos modelos, usado para provar retreino equivalente: `sha256:a65fad10ce8cd3333ac08f1134f59c1399a2f337637a9151881178ff55d3805d`.
+
+O treinamento fixa seeds, hash seed e pools numéricos em uma thread. Um retreino completo confirmou o mesmo fingerprint e, após verificar o checksum anterior, preservou o mesmo artefato publicado e o mesmo checksum bruto.
+
+### Runtime fail-closed e contrato HTTP
+
+`ThermalMlPredictor` somente carrega quando bundle, metadados, tipo de artefato, versão de features, estágio, origem sintética, ordem das 31 features e checksum são coerentes. Falha deixa health disponível com `ready: false`, mas `/thermal/predict` responde `503`. Corrupção e remoção foram testadas sem renomear o artefato real.
+
+Os schemas Pydantic usam aliases camelCase, rejeitam campos extras, NaN/infinito, UUIDs inválidos, thresholds fora de ordem e valores fora de faixa. O gateway Zod exige `ready`, tipo térmico, estágio permitido, checksum bem formado, feature version compatível e declaração da origem sintética. O request contém apenas leitura, janelas, baseline, thresholds e qualidade; nenhum target ou manifesto é importado no runtime.
+
+O `modelScore` só é calculado depois de `predict_proba` supervisionado válido. O piso de engenharia pode elevar `riskScore` depois disso, sem alterar `modelScore`. Para o caso 75,6/40/35,6 executado por HTTP real, o modelo retornou `modelScore = 10,0867`; o limite crítico elevou `riskScore` para 85 e `riskLevel = CRITICAL`, com explicação explícita do piso posterior à inferência.
+
+O caminho real `thermalAiGateway -> GET health -> POST predict -> FastAPI -> bundle sklearn` foi executado localmente sem mock. Readiness retornou `SYNTHETIC_EXPERIMENTAL`, versão `thermal-2026.09.08-b011c805c78a` e o checksum publicado. O `inferenceRequestId` foi preservado e a resposta passou pelo schema Zod estrito.
+
+### Persistência e estado da validação
+
+O Next.js reaproveita o orquestrador transacional da Etapa 5: Prediction, `ThermalReading.ANALYZED` e `InferenceRequest.SUCCEEDED` são gravados juntos, com snapshot, IDs, feature version, versão/checksum/estágio, scores, causa e explicações. O backfill continua dry-run por padrão e falha fechado quando o health cai. `scripts/verify-thermal-db-flow.ts` prepara uma única chave idempotente para a leitura mais recente do TP-039 e chama somente repository + orquestrador reais.
+
+A tentativa de carregar as 7.186 leituras reservadas ainda ausentes foi recusada pela revisão automática porque escrever milhares de linhas no banco demonstrativo é uma mutação persistente ampla sem autorização específica. Nenhuma escrita foi feita. Os comandos foram deixados prontos para execução direta/autorizada:
+
+```text
+pnpm thermal:load-reserved -- --apply --allow-existing
+pnpm thermal:verify-db-flow
+```
+
+Assim, treinamento, artefato, FastAPI e integração HTTP estão comprovados; a Prediction persistida e sua apresentação na interface permanecem pendentes da carga autorizada no banco. A validação visual da interface com resultado real também continua pendente.
+
+Validação executada: **18 testes Python**, **325 testes TypeScript** em 33 arquivos, typecheck e lint completos sem erros, compilação Python e auditoria de isolamento do `ground truth`. O validador recalcula tanto o checksum bruto quanto o fingerprint semântico a partir do bundle antes de aprová-lo.
+
+## Limitação histórica do ambiente de construção original
 
 O sandbox usado para gerar este projeto tem acesso de rede restrito a uma allowlist de domínios que **não inclui `binaries.prisma.sh`**, de onde o Prisma baixa o engine binário nativo. Por isso, `npx prisma generate` e `npx prisma migrate dev` não puderam ser executados aqui. O schema foi validado manualmente e o restante do código foi checado com `tsc --noEmit` e `eslint` — os únicos erros restantes de TypeScript são todos cascata direta da ausência do Prisma Client gerado (tipos como `Prisma.WorkOrderCreateInput` não existem até `generate` rodar). Rodando `pnpm install && npx prisma generate` na sua máquina (com internet irrestrita), esses erros desaparecem.

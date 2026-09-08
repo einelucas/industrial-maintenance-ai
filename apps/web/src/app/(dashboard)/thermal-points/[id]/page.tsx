@@ -58,6 +58,7 @@ export default async function ThermalPointDetailPage({ params }: { params: { id:
         )}
       </div>
 
+      <Button asChild><Link href={`/thermal-monitoring/points/${point.id}`}>Abrir monitoramento e evidências</Link></Button>
       <Card>
         <CardHeader>
           <CardTitle>Estado analítico</CardTitle>

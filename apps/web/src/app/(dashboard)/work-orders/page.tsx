@@ -42,8 +42,8 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
           <h1 className="text-xl font-semibold">Ordens de Serviço</h1>
         </div>
         <Button asChild>
-          <Link href="/work-orders/new">
-            <Plus className="h-4 w-4" /> Nova OS
+          <Link href="/thermal-incidents">
+            <Plus className="h-4 w-4" /> Autorizar OS por incidente
           </Link>
         </Button>
       </div>

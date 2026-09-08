@@ -45,6 +45,7 @@ export async function importThermalReadingsCsvAction(
     });
 
     revalidatePath("/thermal-readings");
+    revalidatePath("/thermal-monitoring", "layout");
     return { report };
   } catch (error) {
     return { error: toActionErrorMessage(error) };

@@ -1,0 +1,70 @@
+{
+  "baselineLogisticRegression": {
+    "f1": 0.1529745042492918,
+    "prAuc": 0.26812538364394706,
+    "precision": 0.08307692307692308,
+    "recall": 0.9642857142857143,
+    "rocAuc": 0.8956910543550941
+  },
+  "classDistribution": {
+    "train": {
+      "false": 0.9662198187219133,
+      "true": 0.03378018127808668
+    },
+    "validation": {
+      "false": 0.9732897247206324,
+      "true": 0.026710275279367673
+    }
+  },
+  "excludedFromModelFeatures": [
+    "anomaly_active",
+    "component_id",
+    "cutoff_at",
+    "episode_id",
+    "failure_mode",
+    "failure_within_24h",
+    "failure_within_7d",
+    "hours_to_event",
+    "maintenance_required",
+    "panel_id",
+    "thermal_point_id",
+    "timestamp"
+  ],
+  "perfectTargetReconstruction": false,
+  "plots": [
+    "scenario_none.png",
+    "scenario_contact_resistance.png",
+    "scenario_degraded_contact.png",
+    "scenario_insufficient_ventilation.png",
+    "scenario_loose_connection.png",
+    "scenario_overload.png",
+    "scenario_phase_imbalance.png",
+    "scenario_sensor_error.png",
+    "scenario_thermal_relay_degradation.png"
+  ],
+  "scope": "offline dataset validation only; final test split was not read",
+  "simpleRuleBaseline": {
+    "f1": 0.06666666666666667,
+    "prAuc": 0.06475163943117399,
+    "precision": 0.07317073170731707,
+    "recall": 0.061224489795918366,
+    "rocAuc": 0.6406861680544523
+  },
+  "syntheticData": true,
+  "topAbsoluteFeatureCorrelationsWith24hTarget": {
+    "average_load_percent": 0.36796167344656305,
+    "consecutive_anomalies": 0.30361522398985497,
+    "delta_t_c": 0.31176260532645117,
+    "max_1h_c": 0.3137600839224787,
+    "max_24h_c": 0.46917978727016846,
+    "max_6h_c": 0.36075491540343657,
+    "mean_15m_c": 0.31149236288785825,
+    "mean_5m_c": 0.31149236288785825,
+    "mean_60m_c": 0.3112519694686826,
+    "minutes_above_limit": 0.5795689488872325,
+    "temperature_average_c": 0.3111514639577432,
+    "temperature_max_c": 0.31149236288785825
+  },
+  "trainRows": 78774,
+  "validationRows": 7338
+}

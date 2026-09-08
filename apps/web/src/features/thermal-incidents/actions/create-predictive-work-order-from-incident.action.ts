@@ -48,6 +48,9 @@ export async function createPredictiveWorkOrderFromIncidentAction(
     });
 
     revalidatePath("/work-orders");
+    revalidatePath(`/thermal-incidents/${thermalIncidentId}`);
+    revalidatePath("/thermal-incidents");
+    revalidatePath("/thermal-monitoring", "layout");
     return { success: true, workOrderId: workOrder.id };
   } catch (error) {
     return { error: toActionErrorMessage(error) };

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, predictions
+from app.api.routes import health, predictions, thermal
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -27,6 +27,7 @@ app.add_middleware(
 
 app.include_router(health.router, prefix=settings.api_v1_prefix)
 app.include_router(predictions.router, prefix=settings.api_v1_prefix)
+app.include_router(thermal.router, prefix=settings.api_v1_prefix)
 
 # Alias sem prefixo de versão, conforme seção 8 do escopo ("GET /health" OU
 # "GET /api/v1/health" — expomos ambos por compatibilidade).

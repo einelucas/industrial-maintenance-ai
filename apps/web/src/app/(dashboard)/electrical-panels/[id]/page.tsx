@@ -78,6 +78,7 @@ export default async function ElectricalPanelDetailPage({ params }: { params: { 
         </Card>
       </div>
 
+      <Button asChild variant="outline"><Link href={`/thermal-monitoring?panelId=${panel.id}`}>Monitorar pontos deste painel</Link></Button>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Componentes monitorados</CardTitle>

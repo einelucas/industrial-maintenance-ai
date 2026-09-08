@@ -11,11 +11,9 @@ import { THERMAL_FEATURE_VERSION } from "@/features/ai-core/temporal-features/ca
 // seguro de retomar (leituras já com `InferenceRequest` — de qualquer
 // resultado — nunca são reenfileiradas por esta rotina).
 //
-// IMPORTANTE: nada aqui é executado automaticamente contra o banco
-// demonstrativo nesta etapa. Enquanto não existir um modelo térmico real
-// (Etapa 8), rodar isto contra as 6.600 leituras da Etapa 2 só serve para
-// confirmar, honestamente, que o núcleo está AI_CORE_UNAVAILABLE — não deve
-// ser executado em produção/demonstração até a Etapa 8.
+// Nada aqui é executado automaticamente. Na Etapa 8 o modelo térmico passou
+// a existir, mas qualquer escrita no banco continua exigindo `--run` e
+// readiness válida; dry-run permanece o padrão.
 
 const DEFAULT_BATCH_SIZE = 25;
 const DEFAULT_MAX_BATCHES = 4;

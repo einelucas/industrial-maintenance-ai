@@ -10,6 +10,7 @@ import {
   type ThermalInferenceResponse,
 } from "@/features/ai-core/schemas/thermal-inference-response.schema";
 import { AiGatewayError } from "@/features/ai-core/services/ai-gateway-error";
+import { THERMAL_FEATURE_VERSION } from "@/features/ai-core/temporal-features/calculate-temporal-features";
 
 // Único gateway de IA térmica (GPMS 2026 / Etapa 5) — nenhum service de
 // leitura, incidente ou alerta deve chamar `fetch` diretamente para o
@@ -26,10 +27,7 @@ import { AiGatewayError } from "@/features/ai-core/services/ai-gateway-error";
 // browser) já vem da convenção do projeto: nenhum Client Component importa
 // services de `features/*/services`.
 //
-// Hoje, contra o FastAPI real deste repositório (que só implementa o
-// preditor mecânico — `DemoPredictor`/`SklearnPredictor`, sem nenhum
-// endpoint `/api/v1/thermal/*`), `checkReadiness()` sempre e corretamente
-// devolve `ready: false`: não existe atalho aqui que finja o contrário.
+// O FastAPI da Etapa 8 só fica pronto com bundle e metadados térmicos válidos.
 
 const BASE_URL = process.env.AI_SERVICE_URL ?? process.env.PREDICTIVE_AI_URL ?? "http://localhost:8000";
 const API_KEY = process.env.AI_SERVICE_API_KEY ?? "";
@@ -93,8 +91,20 @@ export const thermalAiGateway = {
     if (data.predictorType !== "thermal") {
       return { ready: false, reason: `Preditor ativo ("${data.predictorType ?? "ausente"}") não é um modelo térmico real.` };
     }
+    if (data.ready !== true) {
+      return { ready: false, reason: data.reason ?? "Núcleo de IA térmica não declarou readiness." };
+    }
     if (!data.modelLoaded) {
       return { ready: false, reason: "Nenhum modelo térmico carregado." };
+    }
+    if (!data.modelChecksum) {
+      return { ready: false, reason: "Checksum do modelo térmico ausente." };
+    }
+    if (data.featureVersion !== THERMAL_FEATURE_VERSION) {
+      return { ready: false, reason: "Versão de features do modelo térmico incompatível." };
+    }
+    if (data.modelStage === "SYNTHETIC_EXPERIMENTAL" && data.isSyntheticModel !== true) {
+      return { ready: false, reason: "Origem sintética do modelo experimental não foi declarada." };
     }
     if (!isAllowedStage(data.modelStage)) {
       return { ready: false, reason: `Estágio de modelo "${data.modelStage ?? "ausente"}" não é permitido para operação.` };

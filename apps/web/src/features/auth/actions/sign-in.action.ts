@@ -13,7 +13,7 @@ export async function signInAction(_prevState: SignInState, formData: FormData):
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/dashboard",
+      redirectTo: "/thermal-monitoring",
     });
     return {};
   } catch (error) {

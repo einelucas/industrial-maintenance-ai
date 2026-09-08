@@ -37,6 +37,8 @@ export async function submitHumanReviewAction(
     });
 
     revalidatePath(`/thermal-incidents/${incident.id}`);
+    revalidatePath("/thermal-incidents");
+    revalidatePath("/thermal-monitoring", "layout");
     return { success: true };
   } catch (error) {
     return { error: toActionErrorMessage(error) };

@@ -1,10 +1,12 @@
 # Industrial Maintenance Intelligence (PCM + IA Preditiva)
 
-Sistema de Planejamento e Controle da Manutenção Industrial com suporte a Inteligência Artificial para manutenção preditiva.
+Sistema de manutenção preditiva termográfica com análise obrigatória por IA e confirmação humana antes da autorização de uma OS.
+
+> **Adequação GPMS 2026 — 08/09/2026:** Etapas 1–5 estruturalmente concluídas; Etapa 6 em validação; Etapa 7 concluída no escopo offline; e Etapa 8 implementada, aguardando apenas a carga/processamento autorizado no banco demonstrativo. O FastAPI executa um modelo térmico `SYNTHETIC_EXPERIMENTAL` verificável e não possui fallback por regras. Veja o [prompt executado da Etapa 8](docs/prompts/etapa-8-treinamento-integracao-fastapi.md) e o [registro técnico](docs/architecture.md#modelo-termográfico-e-fastapi-obrigatório-gpms-2026--adequação-etapa-8).
 
 ## Propósito
 
-Permitir o ciclo completo de PCM (cadastro de equipamentos, ordens de serviço, planos preventivos) combinado com um serviço de IA que calcula risco de falha a partir de leituras de sensores, gera alertas e permite que um planejador transforme um alerta em uma ordem de serviço preditiva.
+Permitir o ciclo `ThermalReading → IA → Prediction → incidente → revisão humana → OS`. Cadastros e consulta/execução de manutenção permanecem acessíveis; o dashboard mecânico e sua conversão direta de alertas foram desativados. As seções históricas abaixo documentam a base anterior; o roteiro vigente está em `Adequaçoes.md`.
 
 ## Arquitetura (resumo — detalhes em `docs/architecture.md`)
 
@@ -34,7 +36,7 @@ industrial-maintenance-ai/
 │       ├── training/           # scripts de treino (separados da inferência)
 │       ├── models/             # model.joblib + metadata.json
 │       └── tests/
-├── datasets/                   # raw/processed (dataset sintético gerado por training/prepare_dataset.py)
+├── datasets/                   # séries, janelas, cenário reservado, metadados e relatórios
 ├── docs/                       # architecture.md, predictive-maintenance.md
 ├── docker-compose.yml
 └── pnpm-workspace.yaml
@@ -95,9 +97,8 @@ python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# (opcional) treinar um modelo real — sem isso, roda em modo DEMO automaticamente
-python -m training.prepare_dataset
-python -m training.train
+# Os artefatos mecânicos antigos são preservados como histórico.
+# O modelo térmico real será integrado na Etapa 8; DEMO não habilita o fluxo térmico.
 
 uvicorn app.main:app --reload --port 8000
 ```
@@ -145,10 +146,61 @@ cd apps/web && pnpm test
 cd apps/web && pnpm lint && pnpm typecheck
 ```
 
+## Dataset termográfico temporal (Etapa 7)
+
+O dataset é sintético e serve para desenvolvimento experimental; ele não comprova eficácia industrial. Para regenerar séries, splits, gráficos, avaliação de vazamento, manifesto e hashes com um único comando:
+
+```bash
+cd services/predictive-ai
+python -m training.run_thermal_dataset_pipeline
+```
+
+O pipeline usa intervalo de 30 minutos, horizonte primário de 24 horas e secundário de 7 dias. Os splits de treino, validação e teste usam períodos e painéis mutuamente exclusivos; o cenário GPMS de 55 pontos, 19 anormais e o caso TP-039 fica separado. O teste final não participa da comparação offline entre regra e regressão logística.
+
+O carregador valida o manifesto, omite `ground truth` e usa a ingestão real do Next.js. Ele é somente leitura por padrão:
+
+```bash
+cd apps/web
+pnpm thermal:load-reserved -- --allow-existing       # dry-run
+pnpm thermal:load-reserved -- --apply --allow-existing # escrita explícita também sobre o cenário demonstrativo existente
+```
+
+O pós-ação permanece reservado, salvo se `--include-post-action` for informado. Na Etapa 8, `--apply --allow-existing` permite completar o cenário demonstrativo existente sem apagar dados; revise antes o dry-run e use uma conexão de banco configurada explicitamente.
+
+## Modelo termográfico e FastAPI (Etapa 8)
+
+O artefato não é baixado de serviço externo nem possui fallback. Em uma instalação limpa, gere e valide o bundle com:
+
+```bash
+cd services/predictive-ai
+python -m training.train_thermal_models
+python -m training.validate_model_artifact
+```
+
+O comando compara Logistic Regression, Random Forest e Gradient Boosting, calibra o vencedor, mantém Isolation Forest apenas como sinal complementar e abre o teste final depois de congelar a seleção. O `.joblib` é ignorado pelo Git e recuperado pelo build controlado; `models/metadata.json` registra checksum, fingerprint reproduzível, hashes dos dados e limitações.
+
+Com o FastAPI rodando, valide o caminho HTTP real do gateway Next.js sem banco:
+
+```bash
+cd apps/web
+pnpm thermal:verify-ai
+```
+
+Para carregar e processar uma leitura do cenário reservado pelo fluxo persistente real:
+
+```bash
+pnpm thermal:load-reserved -- --apply --allow-existing
+pnpm thermal:verify-db-flow
+```
+
+O primeiro comando é uma carga pelo service de ingestão, não uma seed Prisma. O segundo usa fila, cálculo temporal, gateway, FastAPI, `Prediction` e consolidação de incidente. Ambos exigem configuração explícita do banco/serviço; a carga é dry-run quando `--apply` não é informado.
+
 ## Endpoints do serviço de IA
 
 - `GET /health` e `GET /api/v1/health` — status do serviço e se há modelo real carregado.
-- `POST /api/v1/predict` — requer header `X-API-Key`. Corpo: `{ equipmentId, temperature?, vibration?, pressure?, rpm?, current?, torque?, operatingHours? }`.
+- `GET /api/v1/thermal/health` — readiness do bundle térmico, versão, estágio, origem e checksum.
+- `POST /api/v1/thermal/predict` — contrato temporal térmico estrito; requer `X-API-Key`.
+- `POST /api/v1/predict` — fluxo mecânico legado desativado; responde `503` para entradas autenticadas.
 
 ## Fluxos ponta-a-ponta já funcionais (seção 48 do escopo original)
 

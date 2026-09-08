@@ -3,10 +3,6 @@ import { notFound } from "next/navigation";
 import { equipmentService } from "@/features/equipments/services/equipment.service";
 import { workOrderRepository } from "@/features/work-orders/repositories/work-order.repository";
 import { maintenancePlanRepository } from "@/features/maintenance-plans/repositories/maintenance-plan.repository";
-import { sensorReadingRepository } from "@/features/sensor-readings/repositories/sensor-reading.repository";
-import { predictionRepository } from "@/features/predictions/repositories/prediction.repository";
-import { ReadingForm } from "@/features/sensor-readings/components/reading-form";
-import { CsvImportForm } from "@/features/sensor-readings/components/csv-import-form";
 import { FailureEventForm } from "@/features/failure-events/components/failure-event-form";
 import { failureEventService } from "@/features/failure-events/services/failure-event.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,23 +13,19 @@ import { Button } from "@/components/ui/button";
 import {
   EquipmentStatusBadge,
   WorkOrderStatusBadge,
-  RiskBadge,
 } from "@/components/shared/status-badge";
-import { formatDate, formatDateTime, formatPercent } from "@/lib/utils/format";
+import { formatDate, formatDateTime } from "@/lib/utils/format";
 
 export default async function EquipmentDetailPage({ params }: { params: { id: string } }) {
   const equipment = await equipmentService.getOrThrow(params.id).catch(() => null);
   if (!equipment) notFound();
 
-  const [workOrders, plans, readings, predictions, failureEvents] = await Promise.all([
+  const [workOrders, plans, failureEvents] = await Promise.all([
     workOrderRepository.findByEquipment(equipment.id),
     maintenancePlanRepository.findByEquipment(equipment.id),
-    sensorReadingRepository.findByEquipment(equipment.id),
-    predictionRepository.findByEquipment(equipment.id),
     failureEventService.listByEquipment(equipment.id),
   ]);
 
-  const latestPrediction = predictions[0];
   const lastIntervention = workOrders.find((wo) => wo.status === "COMPLETED");
   const nextPreventive = plans.sort((a, b) => a.nextExecution.getTime() - b.nextExecution.getTime())[0];
 
@@ -58,18 +50,16 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
             <Link href={`/equipments/${equipment.id}/edit`}>Editar</Link>
           </Button>
           <Button asChild>
-            <Link href={`/work-orders/new?equipmentId=${equipment.id}`}>Nova OS</Link>
+            <Link href="/thermal-incidents">Revisar incidentes para OS</Link>
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="resumo">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="os">Ordens de Serviço</TabsTrigger>
           <TabsTrigger value="preventivas">Preventivas</TabsTrigger>
-          <TabsTrigger value="medicoes">Medições</TabsTrigger>
-          <TabsTrigger value="predicoes">Predições</TabsTrigger>
           <TabsTrigger value="falhas">Falhas reais</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
@@ -101,16 +91,9 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle>Risco atual</CardTitle></CardHeader>
-              <CardContent className="flex items-center gap-2 text-sm">
-                {latestPrediction ? (
-                  <>
-                    <RiskBadge level={latestPrediction.riskLevel} />
-                    <span className="text-muted-foreground">{formatPercent(latestPrediction.failureProbability)}</span>
-                  </>
-                ) : (
-                  "Sem predições ainda"
-                )}
+              <CardHeader><CardTitle>Monitoramento térmico</CardTitle></CardHeader>
+              <CardContent className="text-sm">
+                <Link className="text-primary underline" href={`/thermal-monitoring?equipmentId=${equipment.id}`}>Consultar pontos, leituras e evidências da IA</Link>
               </CardContent>
             </Card>
           </div>
@@ -162,68 +145,6 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                   <TableCell>{plan.name}</TableCell>
                   <TableCell>{plan.frequencyType}</TableCell>
                   <TableCell>{formatDate(plan.nextExecution)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TabsContent>
-
-        <TabsContent value="medicoes">
-          <div className="space-y-6">
-            <ReadingForm equipmentId={equipment.id} />
-            <CsvImportForm equipmentId={equipment.id} />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Temp.</TableHead>
-                  <TableHead>Vibração</TableHead>
-                  <TableHead>Pressão</TableHead>
-                  <TableHead>RPM</TableHead>
-                  <TableHead>Corrente</TableHead>
-                  <TableHead>Origem</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {readings.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="py-6 text-center text-muted-foreground">Nenhuma medição registrada.</TableCell></TableRow>
-                )}
-                {readings.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{formatDateTime(r.measuredAt)}</TableCell>
-                    <TableCell>{r.temperature ?? "—"}</TableCell>
-                    <TableCell>{r.vibration ?? "—"}</TableCell>
-                    <TableCell>{r.pressure ?? "—"}</TableCell>
-                    <TableCell>{r.rpm ?? "—"}</TableCell>
-                    <TableCell>{r.current ?? "—"}</TableCell>
-                    <TableCell>{r.source}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="predicoes">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Probabilidade</TableHead>
-                <TableHead>Risco</TableHead>
-                <TableHead>Modelo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {predictions.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">Nenhuma predição ainda.</TableCell></TableRow>
-              )}
-              {predictions.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>{formatDateTime(p.createdAt)}</TableCell>
-                  <TableCell>{formatPercent(p.failureProbability)}</TableCell>
-                  <TableCell><RiskBadge level={p.riskLevel} /></TableCell>
-                  <TableCell className="font-mono text-xs">{p.modelVersion}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

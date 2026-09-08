@@ -13,6 +13,9 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "thermal:backfill": "tsx scripts/thermal-backfill.ts",
+    "thermal:load-reserved": "tsx scripts/load-reserved-thermal-scenario.ts",
+    "thermal:verify-ai": "tsx scripts/verify-thermal-ai-integration.ts",
+    "thermal:verify-db-flow": "tsx scripts/verify-thermal-db-flow.ts",
     "test": "vitest run"
   },
   "prisma": {

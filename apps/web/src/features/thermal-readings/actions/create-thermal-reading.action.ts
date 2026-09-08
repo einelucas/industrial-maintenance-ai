@@ -34,6 +34,7 @@ export async function createThermalReadingAction(
 
     revalidatePath("/thermal-readings");
     revalidatePath(`/thermal-points/${reading.thermalPointId}`);
+    revalidatePath("/thermal-monitoring", "layout");
     return { success: true };
   } catch (error) {
     return { error: toActionErrorMessage(error) };

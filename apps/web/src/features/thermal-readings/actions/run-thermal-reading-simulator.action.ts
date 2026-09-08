@@ -66,6 +66,7 @@ export async function runThermalReadingSimulatorAction(
     });
 
     revalidatePath("/thermal-readings");
+    revalidatePath("/thermal-monitoring", "layout");
     revalidatePath(`/thermal-points/${parsed.data.thermalPointId}`);
     return { result };
   } catch (error) {

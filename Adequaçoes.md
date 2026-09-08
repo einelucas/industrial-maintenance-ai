@@ -58,6 +58,8 @@ Regras determinísticas continuam permitidas apenas para validação de entrada,
 
 ### Próxima ação recomendada
 
+**Atualização de 08/09/2026:** a implementação da interface da Etapa 6 já foi iniciada e está em validação. O próximo trabalho é validar as telas em navegador e, após a Etapa 8, o fluxo com o modelo real. Consulte o registro e as pendências da Etapa 6 abaixo; a descrição seguinte preserva o contexto da transição a partir da Etapa 5.
+
 Prosseguir pela **Etapa 6 — Interface operacional termográfica**, pois as Etapas 1 a 5 já estão prontas: domínio, simulação persistida (55 pontos, 6.600 leituras, caso crítico `TP-039` íntegro), backend administrativo, entrada de leituras e agora também a cadeia estrutural completa `Reading -> IA -> Prediction -> Incident -> HumanReview -> WorkOrder`, com gateway fail-closed, features temporais rastreáveis e revisão humana auditável — tudo comprovado por teste de integração de ponta a ponta em banco isolado. **A Etapa 6 constrói a interface sobre essa estrutura, mas as telas analíticas devem continuar exibindo `PENDING_AI`/`AI_CORE_UNAVAILABLE`** até a Etapa 8 integrar o modelo termográfico real — não há nenhuma predição real para mostrar ainda.
 
 ### O que não deve ser feito agora
@@ -85,9 +87,9 @@ Prosseguir pela **Etapa 6 — Interface operacional termográfica**, pois as Eta
 |     3 | Backend do domínio                         | CRUD estrutural sem atalhos de diagnóstico              | Etapa 2     | Concluída   |
 |     4 | Entrada de leituras                        | Manual, CSV e simulador com estado `PENDING_AI`         | Etapa 3     | Concluída   |
 |     5 | Orquestração AI-first e revisão humana    | Contrato obrigatório IA → incidente → decisão humana    | Etapa 4     | Estruturalmente concluída |
-|     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Próxima     |
-|     7 | Dataset sintético temporal                 | Dados reproduzíveis para treino                        | Etapas 1–5  | Pendente    |
-|     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Pendente    |
+|     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Em validação |
+|     7 | Dataset sintético temporal                 | Dados reproduzíveis para treino                        | Etapas 1–5  | Concluída no escopo offline |
+|     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Em validação |
 |     9 | Dispositivos e telemetria                  | Ingestão contínua segura e fila para a IA             | Etapa 8     | Pendente    |
 |    10 | Relatórios e feedback                      | Evidência, decisão humana e aprendizado operacional  | Etapas 6–9  | Pendente    |
 |    11 | Qualidade e demonstração                   | MVP estabilizado e teste de remoção da IA             | Etapas 0–10 | Pendente    |
@@ -381,7 +383,7 @@ O campo `initiallyAnomalous` representa apenas o fato histórico fornecido pelo 
 - [x] Gerar leituras como séries temporais relacionadas, nunca como linhas aleatórias independentes — cada leitura deriva de ambiente/carga/degradação progressiva do mesmo ponto, com timestamps sequenciais.
 - [x] Persistir os dados simulados no PostgreSQL pelas mesmas camadas de validação usadas pela aplicação — persistidos via Prisma Client real (constraints de unicidade/FK do schema aplicadas de fato). As camadas de serviço/Zod específicas do domínio térmico (`features/thermal-*`) ainda não existem — ficam para a Etapa 3; não há atalho que as contorne porque elas não existem ainda.
 - [x] Manter um manifesto de `ground truth` fora do caminho de decisão do runtime — `datasets/demo/reserved_plant_manifest.json`; teste automatizado (`manifest-isolation.test.ts`) garante que nenhum arquivo de `src/` fora de `lib/thermal-simulation` e `lib/db` referencia o escritor do seed ou o manifesto.
-- [x] Reservar o cenário de demonstração como conjunto não utilizado no treinamento para evitar memorização/vazamento — seeds/versão documentados no manifesto com nota explícita; não há ainda pipeline de treino (Etapa 7) para violar isso.
+- [x] Reservar o cenário de demonstração como conjunto não utilizado no treinamento para evitar memorização/vazamento — seeds/versão documentados no manifesto; a Etapa 7 confirmou identidades e períodos disjuntos dos splits de desenvolvimento.
 
 #### 2.2. Criar estrutura da planta demonstrativa
 
@@ -474,7 +476,7 @@ ThermalReading.total = 6.600 (120 por ponto, 55 pontos) ✓ confirmado
 - [x] Existem 55 pontos, o fato histórico dos 19 anormais está registrado e o cenário reservado contém 19 episódios anormais sem antecipar o resultado à aplicação — confirmado no banco; nenhum código da aplicação lê `initiallyAnomalous` para decidir severidade (não existe consumidor algum ainda).
 - [x] O cenário crítico está íntegro — `TP-039`, 75.6/40.0/35.6, confirmado no banco.
 - [x] As séries sintéticas foram persistidas como registros reais no banco, sem mocks de interface ou API — 6.600 `ThermalReading` reais, via Prisma Client, sem nenhuma resposta falsa de FastAPI ou array hardcoded.
-- [x] O conjunto demonstrativo foi separado do conjunto usado para treinar o modelo — seeds/versão documentados no manifesto reservado; não existe ainda pipeline de treino para consumir/misturar isso.
+- [x] O conjunto demonstrativo foi separado do conjunto usado para treinar o modelo — seeds/versão documentados no manifesto reservado e isolamento confirmado pelo pipeline da Etapa 7.
 - [x] Nenhuma anomalia operacional aparece como detectada antes da inferência real — `Prediction`/`ThermalIncident`/`Alert`/`WorkOrder(PREDICTIVE)` = 0, confirmado no banco.
 - [x] Usuários demo continuam acessíveis — 4 usuários ativos confirmados no banco (mesmos e-mails/senhas de antes).
 - [x] Nenhum dado mecânico incoerente permanece no seed ativo — 0 equipamentos com categoria mecânica legada confirmado no banco; `seed.ts` não cria mais motores/bombas/compressor/redutor/ventilador/caldeira nem leituras de vibração/RPM/torque.
@@ -866,6 +868,8 @@ feat(work-orders): require confirmed AI analysis for predictive orders
 
 ## Etapa 6 — Interface operacional termográfica
 
+> **08/09/2026 — em validação:** prompt gerado e consumido em `docs/prompts/etapa-6-interface-termografica.md`. Dashboard, detalhe do ponto, incidentes e forms implementados; 322 testes unitários, typecheck, lint e build executados. Consultas somente leitura confirmaram 55 pontos e 6.600 leituras pendentes. Itens `[~]` têm implementação, mas ainda precisam de validação visual/operacional. Browser indisponível nesta sessão; modelo real depende da Etapa 8. Evidências e limites em `docs/architecture.md`.
+
 ### Objetivo
 
 Construir a experiência principal para planejador, técnico e gestor consumindo exclusivamente registros reais do PostgreSQL e resultados rastreáveis da IA. A interface poderá ser estruturada antes do modelo final, mas não poderá usar mocks, arrays hardcoded ou severidade calculada no frontend; as telas analíticas permanecerão em `PENDING_AI`/`AI_CORE_UNAVAILABLE` até a Etapa 8.
@@ -891,75 +895,75 @@ Construir a experiência principal para planejador, técnico e gestor consumindo
 
 #### 6.1. Navegação
 
-- [ ] Adicionar “Monitoramento térmico” à sidebar.
-- [ ] Adicionar “Incidentes térmicos”.
-- [ ] Adicionar “Painéis elétricos”.
-- [ ] Manter PCM/OS acessível.
-- [ ] Manter somente as partes do PCM que funcionam como consequência da análise e da decisão humana.
-- [ ] Remover/ocultar o dashboard preditivo mecânico e fluxos genéricos que permitam demonstrar valor sem IA.
-- [ ] Tornar o monitoramento térmico baseado em IA a tela principal após o login.
+- [x] Adicionar “Monitoramento térmico” à sidebar.
+- [x] Adicionar “Incidentes térmicos”.
+- [x] Adicionar “Painéis elétricos”.
+- [x] Manter PCM/OS acessível.
+- [~] Manter somente as partes do PCM que funcionam como consequência da análise e da decisão humana.
+- [~] Remover/ocultar o dashboard preditivo mecânico e fluxos genéricos que permitam demonstrar valor sem IA.
+- [x] Tornar o monitoramento térmico baseado em IA a tela principal após o login.
 
 #### 6.2. Dashboard dos 55 pontos
 
-- [ ] Total monitorado.
-- [ ] Normais.
-- [ ] Atenção.
-- [ ] Altos.
-- [ ] Críticos.
-- [ ] Sem comunicação.
-- [ ] Incidentes abertos.
-- [ ] Maior temperatura.
-- [ ] Maior `deltaT`.
-- [ ] Tendência mais rápida.
-- [ ] Última atualização.
-- [ ] Estado e idade da última inferência.
-- [ ] Quantidade de leituras `PENDING_AI`/`AI_FAILED`.
-- [ ] Obter normal/atenção/alto/crítico somente da última `Prediction` válida.
+- [~] Total monitorado.
+- [~] Normais.
+- [~] Atenção.
+- [~] Altos.
+- [~] Críticos.
+- [~] Sem comunicação.
+- [~] Incidentes abertos.
+- [~] Maior temperatura.
+- [~] Maior `deltaT`.
+- [~] Tendência mais rápida.
+- [~] Última atualização.
+- [~] Estado e idade da última inferência.
+- [~] Quantidade de leituras `PENDING_AI`/`AI_FAILED`.
+- [x] Obter normal/atenção/alto/crítico somente da última `Prediction` válida.
 
 #### 6.3. Mapa/lista hierárquica
 
-- [ ] Filtrar por setor.
-- [ ] Filtrar por equipamento.
-- [ ] Filtrar por painel.
-- [ ] Filtrar por componente.
-- [ ] Filtrar por severidade.
-- [ ] Filtrar por conectividade.
-- [ ] Destacar os 19 pontos originalmente anormais.
-- [ ] Separar visualmente o fato histórico “19 originalmente anormais” do estado atual inferido pela IA.
-- [ ] Permitir acesso ao detalhe em um clique.
+- [x] Filtrar por setor.
+- [x] Filtrar por equipamento.
+- [x] Filtrar por painel.
+- [x] Filtrar por componente.
+- [x] Filtrar por severidade.
+- [x] Filtrar por conectividade.
+- [x] Destacar os 19 pontos originalmente anormais.
+- [x] Separar visualmente o fato histórico “19 originalmente anormais” do estado atual inferido pela IA.
+- [~] Permitir acesso ao detalhe em um clique.
 
 #### 6.4. Detalhe do ponto
 
-- [ ] Cabeçalho com identificação e estado.
-- [ ] Temperatura atual, referência e `deltaT`.
-- [ ] Tendência e persistência.
-- [ ] Gráfico com limites.
-- [ ] Carga/corrente no mesmo intervalo.
-- [ ] Predições e explicações.
-- [ ] Provável modo de falha, confiança, versão e checksum do modelo.
-- [ ] Incidentes e OS.
-- [ ] Configuração e calibração.
-- [ ] Estado do dispositivo.
+- [~] Cabeçalho com identificação e estado.
+- [~] Temperatura atual, referência e `deltaT`.
+- [~] Tendência e persistência.
+- [~] Gráfico com limites.
+- [~] Carga/corrente no mesmo intervalo.
+- [~] Predições e explicações.
+- [~] Provável modo de falha, confiança, versão e checksum do modelo.
+- [~] Incidentes e OS.
+- [~] Configuração e calibração.
+- [~] Estado do dispositivo.
 
 #### 6.5. Tela de incidente
 
-- [ ] Linha do tempo.
-- [ ] Pico e evolução.
-- [ ] Explicações.
-- [ ] Ação sugerida.
-- [ ] Botões “Confirmar defeito”, “Rejeitar”, “Inconclusivo” e “Solicitar nova leitura”.
-- [ ] Justificativa e trilha da revisão humana.
-- [ ] Conversão em OS somente depois de confirmação humana.
-- [ ] Monitoramento pós-ação.
+- [~] Linha do tempo.
+- [~] Pico e evolução.
+- [~] Explicações.
+- [~] Ação sugerida.
+- [~] Botões “Confirmar defeito”, “Rejeitar”, “Inconclusivo” e “Solicitar nova leitura”.
+- [x] Justificativa e trilha da revisão humana.
+- [x] Conversão em OS somente depois de confirmação humana.
+- [~] Monitoramento pós-ação.
 
 #### 6.6. Responsividade e estados
 
-- [ ] Loading skeleton.
-- [ ] Empty state.
-- [ ] Error boundary.
-- [ ] Estado de serviço analítico indisponível.
-- [ ] Bloqueio operacional quando o modelo não estiver pronto, sem preencher a tela com valores fictícios.
-- [ ] Mobile para telas de consulta e decisão humana sobre o defeito.
+- [~] Loading skeleton.
+- [~] Empty state.
+- [~] Error boundary.
+- [~] Estado de serviço analítico indisponível.
+- [x] Bloqueio operacional quando o modelo não estiver pronto, sem preencher a tela com valores fictícios.
+- [~] Mobile para telas de consulta e decisão humana sobre o defeito.
 
 ### Testes da etapa
 
@@ -980,7 +984,7 @@ Construir a experiência principal para planejador, técnico e gestor consumindo
 - [ ] É possível entender por que o alerta foi aberto.
 - [ ] Todo resultado exibido é rastreável a uma linha do banco e a uma inferência real.
 - [ ] Todo o fluxo operacional pode ser feito pela interface depois que o modelo real estiver saudável.
-- [ ] Sem IA, a interface não oferece diagnóstico alternativo nem cria OS preditiva.
+- [x] Sem IA, a interface não oferece diagnóstico alternativo nem cria OS preditiva — gates de apresentação e servidor cobertos por testes; demonstração visual ainda pendente.
 
 ### Commits sugeridos
 
@@ -993,6 +997,8 @@ feat(ui): add thermal incident workflow
 ---
 
 ## Etapa 7 — Dataset sintético temporal
+
+**Atualização de 08/09/2026:** pipeline offline concluído e reproduzível. O manifesto final tem SHA-256 `8b948e4e4f64bd6fce386f4f2876f777aa48f43ee4a9d20c0d1b2bd2adb8cd98`; o cenário reservado foi validado pelo carregador real em dry-run, sem alterar o banco demonstrativo já populado. A escrita e o processamento ponta a ponta ficam deliberadamente para um banco isolado e para o modelo da Etapa 8. Prompt executado: `docs/prompts/etapa-7-dataset-termico-temporal.md`.
 
 ### Objetivo
 
@@ -1020,84 +1026,84 @@ services/predictive-ai/training/
 
 #### 7.1. Definir contrato do dataset
 
-- [ ] Definir unidade e nome de cada coluna.
-- [ ] Definir targets.
-- [ ] Definir horizonte de 24 h e/ou 7 dias.
-- [ ] Definir intervalo de amostragem.
-- [ ] Definir duração simulada.
-- [ ] Definir seed global.
-- [ ] Definir distribuição por tipo de componente.
-- [ ] Definir seeds e períodos diferentes para treino, validação, teste e demonstração no banco.
+- [x] Definir unidade e nome de cada coluna.
+- [x] Definir targets.
+- [x] Definir horizonte de 24 h e 7 dias.
+- [x] Definir intervalo de amostragem — 30 minutos, permitindo medir a tendência de 60 min com a semântica estrita da Etapa 5.
+- [x] Definir duração simulada.
+- [x] Definir seeds globais reproduzíveis.
+- [x] Definir distribuição por tipo de componente.
+- [x] Definir seeds e períodos diferentes para treino, validação, teste e demonstração no banco.
 
 #### 7.2. Gerar condições normais
 
-- [ ] Ciclo diário do ambiente.
-- [ ] Turnos de produção.
-- [ ] Variação de carga.
-- [ ] Aquecimento após acionamento.
-- [ ] Resfriamento após parada.
-- [ ] Baseline próprio por componente.
-- [ ] Ruído e qualidade de sensor.
-- [ ] Pequenas falhas de comunicação.
+- [x] Ciclo diário do ambiente.
+- [x] Turnos de produção.
+- [x] Variação de carga.
+- [x] Aquecimento após acionamento.
+- [x] Resfriamento após parada.
+- [x] Baseline próprio por componente.
+- [x] Ruído e qualidade de sensor.
+- [x] Pequenas falhas de comunicação.
 
 #### 7.3. Gerar falhas plausíveis
 
-- [ ] Conexão frouxa/resistência elevada.
-- [ ] Sobrecarga.
-- [ ] Desequilíbrio de fases.
-- [ ] Contato degradado.
-- [ ] Ventilação insuficiente.
-- [ ] Relé degradado.
-- [ ] Erro de sensor como classe separada.
-- [ ] Recuperação após manutenção.
+- [x] Conexão frouxa/resistência elevada.
+- [x] Sobrecarga.
+- [x] Desequilíbrio de fases.
+- [x] Contato degradado.
+- [x] Ventilação insuficiente.
+- [x] Relé degradado.
+- [x] Erro de sensor como classe separada.
+- [x] Recuperação após manutenção.
 
 #### 7.4. Reproduzir o desafio
 
-- [ ] Criar 55 identidades persistentes.
-- [ ] Criar episódios anormais em 19 pontos.
-- [ ] Incluir o pico de 75,6 °C contra 40 °C.
-- [ ] Evitar replicar o mesmo exemplo milhares de vezes.
-- [ ] Garantir variedade de carga, ambiente, causa e duração.
-- [ ] Reservar a série usada na demonstração; ela não poderá participar do treino.
-- [ ] Aplicar o cenário reservado ao banco via service/API real, sem insert de resultados da IA.
+- [x] Criar 55 identidades persistentes.
+- [x] Criar episódios anormais em 19 pontos.
+- [x] Incluir uma única ocorrência do pico de 75,6 °C contra 40 °C (ΔT 35,6 °C).
+- [x] Evitar replicar o mesmo exemplo milhares de vezes.
+- [x] Garantir variedade de carga, ambiente, causa e duração.
+- [x] Reservar a série usada na demonstração; ela não participa do treino.
+- [~] Aplicar o cenário reservado ao banco via service/API real, sem insert de resultados da IA — carregador real implementado e validado em dry-run; nenhuma escrita foi feita no banco demonstrativo já populado.
 
 #### 7.5. Criar features temporais
 
-- [ ] Janelas móveis.
-- [ ] Tendência.
-- [ ] Persistência.
-- [ ] Comparação com baseline.
-- [ ] Comparação entre fases/referências.
-- [ ] Interações com carga.
-- [ ] Indicadores de qualidade.
+- [x] Janelas móveis.
+- [x] Tendência.
+- [x] Persistência.
+- [x] Comparação com baseline.
+- [x] Comparação entre fases/referências.
+- [x] Interações com carga.
+- [x] Indicadores de qualidade.
 
 #### 7.6. Separar dados corretamente
 
-- [ ] Split cronológico.
-- [ ] Reservar pontos/painéis no teste.
-- [ ] Evitar vazamento de target.
-- [ ] Manter teste final intocado.
-- [ ] Salvar manifesto e hash.
+- [x] Split cronológico.
+- [x] Reservar pontos/painéis no teste.
+- [x] Evitar vazamento de target.
+- [x] Manter teste final intocado durante seleção/comparação.
+- [x] Salvar manifesto e hash.
 
 #### 7.7. Validar o gerador
 
-- [ ] Plotar amostras de cada cenário.
-- [ ] Verificar correlações esperadas.
-- [ ] Verificar distribuição de classes.
-- [ ] Confirmar que regra simples não reconstrói perfeitamente o target por vazamento.
-- [ ] Criar testes de reprodutibilidade.
-- [ ] Confirmar que o `ground truth` não é consultado pelo FastAPI durante a inferência.
-- [ ] Confirmar que o frontend não importa arquivos do gerador nem metadados de rótulo.
+- [x] Plotar amostras normais e de cada cenário de falha.
+- [x] Verificar correlações das features com o target.
+- [x] Verificar distribuição de classes.
+- [x] Confirmar que regra simples e baseline ML não reconstroem perfeitamente o target.
+- [x] Criar testes de reprodutibilidade e causalidade temporal.
+- [x] Confirmar que o `ground truth` não é consultado pelo FastAPI durante a inferência.
+- [x] Confirmar que o frontend não importa arquivos do gerador nem metadados de rótulo.
 
 ### Critério de saída
 
-- [ ] Dataset pode ser regenerado com o mesmo hash.
-- [ ] Cenários normais e anormais são visualmente plausíveis.
-- [ ] Split não mistura futuro no passado.
-- [ ] Os 55/19 e o caso crítico estão presentes.
-- [ ] O cenário reservado pode ser carregado no banco e processado sem mocks.
-- [ ] Nenhuma saída esperada foi hardcoded na aplicação.
-- [ ] Manifesto informa claramente que os dados são sintéticos.
+- [x] Dataset pode ser regenerado com o mesmo hash — duas execuções consecutivas produziram `8b948e4e...cd98`.
+- [x] Cenários normais e anormais têm gráficos auditáveis e amostras representativas revisadas.
+- [x] Split não mistura futuro no passado.
+- [x] Os 55/19 e o caso crítico estão presentes.
+- [~] O cenário reservado pode ser carregado pelo service real sem mocks; dry-run passou, mas escrita/processamento não foram executados no banco demonstrativo compartilhado.
+- [x] Nenhuma saída esperada foi hardcoded na aplicação.
+- [x] Manifesto informa claramente que os dados são sintéticos e não provam eficácia industrial.
 
 ### Commits sugeridos
 
@@ -1111,6 +1117,8 @@ test(ml-data): validate synthetic scenario reproducibility
 
 ## Etapa 8 — Treinamento termográfico e integração FastAPI
 
+**Atualização de 08/09/2026:** treinamento, artefato, validação, FastAPI térmico e gateway real concluídos em código. Random Forest calibrada venceu os candidatos; o artefato ativo tem checksum `sha256:ded7ae6e80dbadefe0c2fd5419a0603c975f67b8f295299abb2b34c01f690468` e fingerprint semântico reproduzível `sha256:a65fad10ce8cd3333ac08f1134f59c1399a2f337637a9151881178ff55d3805d`. A carga de 7.186 leituras reservadas e a Prediction persistida ficaram pendentes porque a revisão automática recusou a mutação ampla no banco compartilhado sem autorização específica. Prompt executado: `docs/prompts/etapa-8-treinamento-integracao-fastapi.md`.
+
 ### Objetivo
 
 Treinar, avaliar e integrar o novo modelo termográfico como dependência obrigatória do aplicativo. Regras de engenharia poderão complementar uma inferência válida e servir como baseline de comparação, mas não existirá predictor alternativo capaz de manter o fluxo operacional sem Machine Learning.
@@ -1123,60 +1131,60 @@ Treinar, avaliar e integrar o novo modelo termográfico como dependência obriga
 
 #### 8.1. Baselines
 
-- [ ] Avaliar somente regras como experimento offline de comparação, nunca como runtime.
-- [ ] Avaliar Logistic Regression.
-- [ ] Registrar resultados por tipo de componente.
-- [ ] Registrar falsos alertas por ponto/dia.
+- [x] Avaliar somente regras como experimento offline de comparação, nunca como runtime.
+- [x] Avaliar Logistic Regression.
+- [x] Registrar resultados por tipo de componente.
+- [x] Registrar falsos alertas por ponto/dia.
 
 #### 8.2. Modelos candidatos
 
-- [ ] Random Forest.
-- [ ] Gradient Boosting.
-- [ ] Isolation Forest para anomalia.
-- [ ] Calibração do score quando aplicável.
-- [ ] Escolher por conjunto de métricas, nunca accuracy isolada.
+- [x] Random Forest.
+- [x] Gradient Boosting.
+- [x] Isolation Forest para anomalia complementar, nunca autônoma.
+- [x] Calibração sigmoide do score supervisionado.
+- [x] Escolher por PR-AUC, ROC-AUC, F1, recall e Brier, nunca accuracy isolada.
 
 #### 8.3. Metadados e artefato
 
-- [ ] Salvar `thermal_model.joblib`.
-- [ ] Criar novo `metadata.json`.
-- [ ] Registrar `SYNTHETIC_EXPERIMENTAL`.
-- [ ] Registrar features, target, horizonte e hash.
-- [ ] Gerar checksum do artefato.
-- [ ] Definir estratégia de armazenamento do modelo.
+- [x] Salvar `thermal_model.joblib`.
+- [x] Criar novo `metadata.json` e preservar metadados mecânicos como histórico inativo.
+- [x] Registrar `SYNTHETIC_EXPERIMENTAL`.
+- [x] Registrar features, target, horizonte e hashes distintos.
+- [x] Gerar e validar checksum bruto do artefato e fingerprint semântico do retreino.
+- [x] Definir geração obrigatória durante build controlado como estratégia recuperável.
 
 #### 8.4. Novo contrato FastAPI
 
-- [ ] Criar schemas térmicos de entrada e saída.
-- [ ] Criar `ThermalMlPredictor`.
-- [ ] Criar detector de anomalia temporal e classificador supervisionado, conforme os resultados de validação.
-- [ ] Criar ensemble em que pelo menos um modelo ML válido seja sempre obrigatório.
-- [ ] Aplicar piso de segurança de engenharia somente depois de obter `modelScore` válido.
-- [ ] Estimar provável modo de falha e sua confiança para revisão humana.
-- [ ] Retornar explicações.
-- [ ] Expor estágio e origem sintética.
-- [ ] Remover `DemoPredictor` e qualquer retorno operacional `RULE_ONLY`.
-- [ ] Falhar na inicialização/readiness se artefato, metadados ou checksum estiverem ausentes ou inválidos.
+- [x] Criar schemas térmicos de entrada e saída estritos.
+- [x] Criar `ThermalMlPredictor`.
+- [x] Criar detector de anomalia temporal, classificador supervisionado e classificador de causa.
+- [x] Criar ensemble em que o modelo supervisionado válido é sempre obrigatório.
+- [x] Aplicar piso de segurança de engenharia somente depois de obter `modelScore` válido.
+- [x] Estimar provável modo de falha e sua confiança para revisão humana.
+- [x] Retornar explicações.
+- [x] Expor estágio e origem sintética.
+- [x] Remover `DemoPredictor` e desativar o endpoint mecânico legado; não há retorno `RULE_ONLY`.
+- [x] Reprovar readiness e predict se artefato, metadados ou checksum estiverem ausentes/inválidos.
 
 #### 8.5. Integração Next.js
 
-- [ ] Atualizar `predictive-ai.client.ts`.
-- [ ] Enviar leitura, janela, baseline e thresholds.
-- [ ] Validar resposta com Zod.
-- [ ] Persistir scores e explicações.
-- [ ] Tratar indisponibilidade sem perder leitura, mantendo-a `PENDING_AI`/`AI_FAILED` e sem criar resultado substituto.
-- [ ] Implementar retry/backfill controlado se necessário.
-- [ ] Bloquear incidentes, alertas de defeito, relatórios analíticos e OS preditivas enquanto a IA estiver indisponível.
+- [x] Desativar definitivamente `predictive-ai.client.ts` mecânico e reutilizar o gateway térmico único.
+- [x] Enviar leitura, janela, baseline e thresholds reais.
+- [x] Validar resposta com Zod estrito.
+- [x] Persistir scores, explicações e proveniência pelo orquestrador transacional.
+- [x] Tratar indisponibilidade sem perder leitura, mantendo-a `PENDING_AI`/`AI_FAILED` e sem criar resultado substituto.
+- [x] Reutilizar retry/backfill controlado e idempotente da Etapa 5.
+- [x] Bloquear incidentes, alertas de defeito, relatórios analíticos e OS preditivas enquanto a IA estiver indisponível.
 
 #### 8.6. Health check
 
-- [ ] Exibir o modelo ML ativo; nenhum tipo `demo` ou `rule-only` será aceito como ready.
-- [ ] Exibir versão.
-- [ ] Exibir estágio.
-- [ ] Exibir se é sintético.
-- [ ] Validar checksum.
-- [ ] Retornar readiness não saudável quando não houver modelo utilizável.
-- [ ] Não expor segredos ou caminhos sensíveis.
+- [x] Exibir o modelo ML ativo; nenhum tipo `demo` ou `rule-only` é aceito como ready.
+- [x] Exibir versão.
+- [x] Exibir estágio.
+- [x] Exibir se é sintético.
+- [x] Validar checksum.
+- [x] Retornar readiness não saudável quando não houver modelo utilizável.
+- [x] Não expor segredos ou caminhos sensíveis.
 
 ### Testes da etapa
 
@@ -1193,13 +1201,13 @@ Treinar, avaliar e integrar o novo modelo termográfico como dependência obriga
 
 ### Critério de saída
 
-- [ ] O FastAPI executa o modelo térmico.
-- [ ] O frontend mostra `SYNTHETIC_EXPERIMENTAL`.
-- [ ] O fluxo operacional não funciona sem o modelo e não existe fallback por regras.
-- [ ] O cenário demonstrativo é lido do banco e processado pelo modelo real.
-- [ ] Toda `Prediction` possui `inferenceId`, versão, checksum, estágio e snapshot reproduzível.
-- [ ] Métricas antigas não aparecem como validação termográfica.
-- [ ] O artefato é recuperável em uma instalação limpa.
+- [x] O FastAPI executa o modelo térmico — validado por TestClient e HTTP real via gateway TypeScript.
+- [~] O frontend possui apresentação de `SYNTHETIC_EXPERIMENTAL`; falta validar a tela com Prediction persistida real.
+- [x] O fluxo operacional não funciona sem o modelo e não existe fallback por regras.
+- [!] O cenário demonstrativo ainda não foi carregado/processado no banco: mutação recusada pela revisão automática até autorização específica.
+- [~] O contrato e o orquestrador exigem `inferenceId`, versão, checksum, estágio e snapshot; persistência real aguarda a execução autorizada no banco.
+- [x] Métricas antigas foram movidas para histórico inativo e não aparecem como validação termográfica.
+- [x] O artefato é recuperável em instalação limpa pelo comando de treinamento documentado e validado por checksum.
 
 ### Commits sugeridos
 
