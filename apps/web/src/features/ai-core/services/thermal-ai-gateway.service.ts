@@ -29,9 +29,21 @@ import { THERMAL_FEATURE_VERSION } from "@/features/ai-core/temporal-features/ca
 //
 // O FastAPI da Etapa 8 só fica pronto com bundle e metadados térmicos válidos.
 
-const BASE_URL = process.env.AI_SERVICE_URL ?? process.env.PREDICTIVE_AI_URL ?? "http://localhost:8000";
+const BASE_URL =
+  process.env.PREDICTIVE_AI_INTERNAL_URL?.trim() ||
+  process.env.AI_SERVICE_URL?.trim() ||
+  process.env.PREDICTIVE_AI_URL?.trim() ||
+  "http://localhost:8000";
 const API_KEY = process.env.AI_SERVICE_API_KEY ?? "";
-const TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 8000);
+
+function positiveIntegerOrDefault(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+// O primeiro acesso ao container da IA pode incluir cold start. Variaveis
+// vazias tambem nao podem virar Number("") === 0 e cancelar imediatamente.
+const TIMEOUT_MS = positiveIntegerOrDefault(process.env.AI_REQUEST_TIMEOUT_MS, 30_000);
 // Pinagem OPCIONAL — quando configuradas, restringem ainda mais o conjunto
 // já fixo em código (`ALLOWED_THERMAL_MODEL_STAGES`); nunca o ampliam. Uma
 // variável de ambiente mal configurada não consegue, sozinha, habilitar

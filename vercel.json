@@ -9,13 +9,7 @@
           "type": "service",
           "service": "predictive_ai",
           "format": "url",
-          "env": "AI_SERVICE_URL"
-        },
-        {
-          "type": "service",
-          "service": "predictive_ai",
-          "format": "url",
-          "env": "PREDICTIVE_AI_URL"
+          "env": "PREDICTIVE_AI_INTERNAL_URL"
         }
       ]
     },

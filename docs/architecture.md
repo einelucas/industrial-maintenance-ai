@@ -565,13 +565,16 @@ o build do `Dockerfile.vercel`, pois os datasets pertencem à raiz do monorepo.
 Rewrites específicos encaminham `/health` e `/api/v1/*` ao FastAPI antes do
 catch-all do frontend.
 
-O serviço `web` declara dois bindings para `predictive_ai`, injetados como
-`AI_SERVICE_URL` e `PREDICTIVE_AI_URL`. Eles são URLs absolutas internas e
-específicas de cada deployment. A comunicação continua autenticada por
-`AI_SERVICE_API_KEY`; o binding fornece alcance e descoberta, não substitui a
-autorização da aplicação. No painel Vercel essas duas URLs devem permanecer
-ausentes, pois uma variável criada manualmente teria precedência sobre o valor
-gerado pela plataforma.
+O serviço `web` declara um binding para `predictive_ai`, injetado como
+`PREDICTIVE_AI_INTERNAL_URL`. Ele é uma URL absoluta interna e específica de
+cada deployment e tem precedência sobre `AI_SERVICE_URL` e
+`PREDICTIVE_AI_URL`, mantidas para desenvolvimento local. A comunicação
+continua autenticada por `AI_SERVICE_API_KEY`; o binding fornece alcance e
+descoberta, não substitui a autorização da aplicação. No painel Vercel essas
+três URLs devem permanecer ausentes, pois uma variável criada manualmente teria
+precedência sobre o valor gerado pela plataforma. O timeout padrão do gateway é
+30 segundos para absorver o cold start do container; valor vazio ou inválido
+volta ao padrão em vez de cancelar a requisição imediatamente.
 
 O middleware global de autenticação foi removido porque o Vercel Services não
 aceita output Edge no serviço Next.js. A proteção permanece no runtime Node:
@@ -582,6 +585,11 @@ rota de relatório exige permissão explicitamente, os crons exigem
 ### Uma execução automática diária
 
 `vercel.json` contém um único agendamento, `GET /api/cron/daily-maintenance` às 06:00 UTC. O endpoint exige `Authorization: Bearer CRON_SECRET` e chama sequencialmente a geração de OS preventivas vencidas e o backfill térmico limitado. Cada resultado é isolado e retornado no mesmo relatório (`SUCCEEDED`, `PARTIAL_FAILURE` ou `FAILED`). Indisponibilidade da IA aparece como `BLOCKED`: nenhuma Prediction alternativa é criada e o resultado preventivo continua visível. Os dois endpoints específicos anteriores continuam acessíveis para compatibilidade/manual, mas não consomem agenda automática.
+
+O backfill dá prioridade operacional às leituras mais recentes, tanto nas
+requisições já enfileiradas quanto na criação de novas solicitações. Assim, a
+execução diária atualiza primeiro o risco atual dos pontos e só depois consome
+o histórico antigo, mantendo idempotência e processamento sequencial.
 
 O cenário fresco é deliberadamente de uso único: confirmação e OS são auditoria real e não são apagadas para repetir apresentações. Ensaios completos devem usar branch/banco demonstrativo separado.
 

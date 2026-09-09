@@ -21,7 +21,8 @@ import { thermalIncidentService } from "@/features/thermal-incidents/services/th
 // no futuro, a fila de telemetria (Etapa 9).
 
 const MAX_HISTORY_SAMPLES = 1000;
-const MAX_ATTEMPTS = Number(process.env.AI_MAX_RETRIES ?? 5);
+const configuredMaxAttempts = Number(process.env.AI_MAX_RETRIES);
+const MAX_ATTEMPTS = Number.isInteger(configuredMaxAttempts) && configuredMaxAttempts > 0 ? configuredMaxAttempts : 5;
 
 const TRANSIENT_REASONS: AiGatewayFailureReason[] = ["NOT_READY", "INSUFFICIENT_DATA", "NETWORK_ERROR", "TIMEOUT"];
 

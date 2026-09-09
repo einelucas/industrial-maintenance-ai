@@ -44,7 +44,13 @@ export const inferenceRequestRepository = {
   findPendingBatch: (limit: number) =>
     prisma.inferenceRequest.findMany({
       where: { status: "PENDING" },
-      orderBy: { createdAt: "asc" },
+      // A leitura mais recente tem prioridade operacional: é ela que define
+      // o risco atual exibido no monitoramento. O histórico é drenado depois.
+      orderBy: [
+        { thermalReading: { measuredAt: "desc" } },
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
       take: limit,
       include: { thermalReading: true, thermalPoint: { include: { component: true } } },
     }),

@@ -5,8 +5,9 @@ import { inferenceRequestRepository } from "@/features/ai-core/repositories/infe
 import { buildInferenceRequestId } from "@/features/ai-core/services/inference-request-id";
 import { THERMAL_FEATURE_VERSION } from "@/features/ai-core/temporal-features/calculate-temporal-features";
 
-// Backfill de leituras PENDING_AI (GPMS 2026 / Etapa 5) — processa em lotes
-// pequenos, nunca uma chamada simultânea por leitura (loop sequencial),
+// Backfill de leituras PENDING_AI (GPMS 2026 / Etapa 5) — prioriza as
+// leituras mais recentes para atualizar primeiro o risco atual dos pontos,
+// depois drena o histórico em lotes pequenos. Nunca faz chamadas simultâneas,
 // interrompe de imediato se a readiness da IA cair no meio da execução, e é
 // seguro de retomar (leituras já com `InferenceRequest` — de qualquer
 // resultado — nunca são reenfileiradas por esta rotina).
@@ -75,8 +76,8 @@ export const thermalBackfillService = {
     let failedCount = 0;
 
     for (let batch = 0; batch < maxBatches; batch++) {
-      // Primeiro drena requisições PENDING já enfileiradas (retry de falhas
-      // transitórias de execuções anteriores) antes de enfileirar leituras novas.
+      // Primeiro drena requisições PENDING já enfileiradas, também em ordem
+      // de leitura mais recente, antes de enfileirar novas solicitações.
       const existingPending = await inferenceRequestRepository.findPendingBatch(batchSize);
 
       let inferenceRequestIds: string[];
@@ -85,7 +86,7 @@ export const thermalBackfillService = {
       } else {
         const newReadings = await prisma.thermalReading.findMany({
           where: { analysisStatus: "PENDING_AI", inferenceRequests: { none: {} } },
-          orderBy: { measuredAt: "asc" },
+          orderBy: [{ measuredAt: "desc" }, { id: "desc" }],
           take: batchSize,
         });
         if (newReadings.length === 0) break;

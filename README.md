@@ -163,18 +163,19 @@ FastAPI no mesmo projeto e domínio:
 - `predictive_ai`: container gerado por `Dockerfile.vercel`;
 - `/api/v1/*` e `/health`: tráfego público encaminhado ao FastAPI;
 - demais rotas: encaminhadas ao Next.js;
-- binding interno: injeta `AI_SERVICE_URL` e `PREDICTIVE_AI_URL` no serviço
-  `web`, sempre apontando para o backend da mesma Preview/Production.
+- binding interno: injeta `PREDICTIVE_AI_INTERNAL_URL` no serviço `web`, sempre
+  apontando para o backend da mesma Preview/Production. Essa variável tem
+  precedência sobre as URLs usadas somente no desenvolvimento local.
 
 Na importação do GitHub, selecione **Services** e deixe o **Root Directory na
 raiz do repositório** (vazio ou `.`), não em `apps/web`. Não cadastre
-`AI_SERVICE_URL` nem `PREDICTIVE_AI_URL` no painel: valores definidos pelo
-usuário sobrescrevem o binding automático.
+`PREDICTIVE_AI_INTERNAL_URL`, `AI_SERVICE_URL` nem `PREDICTIVE_AI_URL` no
+painel: valores definidos pelo usuário sobrescrevem a descoberta automática.
 
 Cadastre como secretos/variáveis do projeto: `DATABASE_URL`, `DIRECT_URL`,
 `AUTH_SECRET`, `NEXTAUTH_URL`, `AI_SERVICE_API_KEY` e `CRON_SECRET`. A mesma
 `AI_SERVICE_API_KEY` é recebida pelos dois serviços. As variáveis opcionais
-`AI_REQUEST_TIMEOUT_MS`, `AI_MAX_RETRIES`, `EXPECTED_MODEL_STAGE`,
+`AI_REQUEST_TIMEOUT_MS` (padrão `30000`), `AI_MAX_RETRIES`, `EXPECTED_MODEL_STAGE`,
 `EXPECTED_MODEL_CHECKSUM` e `CORS_ORIGINS` podem ser usadas para pinagem e
 ajuste operacional; `APP_ENV=production` já é definido na imagem.
 
@@ -185,6 +186,8 @@ aprovado. O deploy falha se artefato, metadados ou checksum forem inválidos.
 O mesmo `vercel.json` registra somente `GET /api/cron/daily-maintenance`,
 diariamente às 06:00 UTC. A chamada autenticada por `CRON_SECRET` executa uma
 vez o scheduler de OS preventivas e um lote limitado do processamento térmico.
+O lote prioriza as leituras mais recentes para atualizar primeiro o risco atual
+dos pontos; o histórico pendente é drenado nas execuções seguintes.
 Os endpoints específicos antigos continuam disponíveis para operação manual,
 mas não são agendados pela Vercel.
 
