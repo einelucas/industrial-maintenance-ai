@@ -8,6 +8,7 @@
     "build:web": "pnpm --filter web build",
     "lint:web": "pnpm --filter web lint",
     "typecheck:web": "pnpm --filter web typecheck",
+    "demo:verify": "pnpm --filter web demo:verify",
     "db:migrate": "pnpm --filter web prisma:migrate",
     "db:seed": "pnpm --filter web prisma:seed",
     "db:studio": "pnpm --filter web prisma:studio"

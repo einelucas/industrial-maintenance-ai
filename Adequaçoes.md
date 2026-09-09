@@ -8,7 +8,7 @@
 >
 > Revisão de arquitetura AI-first: 03/09/2026.
 >
-> Estado informado pelo projeto: **Etapas 1, 2, 3 e 4 implementadas e validadas; Etapa 5 estruturalmente concluída** (cadeia IA-first, contratos e bloqueios prontos e testados — o runtime permanece `AI_CORE_UNAVAILABLE` até o modelo termográfico real da Etapa 8 existir).
+> Estado informado pelo projeto em 09/09/2026: **Etapas 1–5 implementadas; Etapa 6 funcional e ainda sem validação visual automatizada; Etapa 7 concluída no escopo offline; Etapa 8 integrada e comprovada no caso TP-039**. A preparação transversal de demonstração/deploy adicionou pré-voo somente leitura, imagem reproduzível do FastAPI e uma única automação diária. Etapas 9, 10, conclusão da 11 e piloto real permanecem pendentes.
 
 ---
 
@@ -87,12 +87,12 @@ Prosseguir pela **Etapa 6 — Interface operacional termográfica**, pois as Eta
 |     3 | Backend do domínio                         | CRUD estrutural sem atalhos de diagnóstico              | Etapa 2     | Concluída   |
 |     4 | Entrada de leituras                        | Manual, CSV e simulador com estado `PENDING_AI`         | Etapa 3     | Concluída   |
 |     5 | Orquestração AI-first e revisão humana    | Contrato obrigatório IA → incidente → decisão humana    | Etapa 4     | Estruturalmente concluída |
-|     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Em validação |
+|     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Funcional; validação visual pendente |
 |     7 | Dataset sintético temporal                 | Dados reproduzíveis para treino                        | Etapas 1–5  | Concluída no escopo offline |
-|     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Em validação |
+|     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Concluída para demonstração |
 |     9 | Dispositivos e telemetria                  | Ingestão contínua segura e fila para a IA             | Etapa 8     | Pendente    |
 |    10 | Relatórios e feedback                      | Evidência, decisão humana e aprendizado operacional  | Etapas 6–9  | Pendente    |
-|    11 | Qualidade e demonstração                   | MVP estabilizado e teste de remoção da IA             | Etapas 0–10 | Pendente    |
+|    11 | Qualidade e demonstração                   | MVP estabilizado e teste de remoção da IA             | Etapas 0–10 | Parcial: pré-voo/deploy pronto |
 |    12 | Piloto e dados reais                       | Validação na planta e evolução do modelo       | Etapa 11    | Pendente    |
 
 ### Caminho crítico
@@ -1202,10 +1202,10 @@ Treinar, avaliar e integrar o novo modelo termográfico como dependência obriga
 ### Critério de saída
 
 - [x] O FastAPI executa o modelo térmico — validado por TestClient e HTTP real via gateway TypeScript.
-- [~] O frontend possui apresentação de `SYNTHETIC_EXPERIMENTAL`; falta validar a tela com Prediction persistida real.
+- [x] O frontend possui apresentação de `SYNTHETIC_EXPERIMENTAL` e o banco demonstrativo contém Prediction persistida real para o TP-039.
 - [x] O fluxo operacional não funciona sem o modelo e não existe fallback por regras.
-- [!] O cenário demonstrativo ainda não foi carregado/processado no banco: mutação recusada pela revisão automática até autorização específica.
-- [~] O contrato e o orquestrador exigem `inferenceId`, versão, checksum, estágio e snapshot; persistência real aguarda a execução autorizada no banco.
+- [x] O cenário demonstrativo está carregado; o TP-039 possui leitura analisada, Prediction rastreável e incidente crítico fresco para revisão humana.
+- [x] O contrato e o orquestrador persistiram `inferenceId`, versão, checksum, estágio e snapshot no caso oficial.
 - [x] Métricas antigas foram movidas para histórico inativo e não aparecem como validação termográfica.
 - [x] O artefato é recuperável em instalação limpa pelo comando de treinamento documentado e validado por checksum.
 
@@ -1216,6 +1216,30 @@ feat(ml): train thermal risk models
 feat(api): add thermal prediction contract
 feat(integration): connect thermal risk engine to PCM
 ```
+
+---
+
+## Adequação transversal — prontidão da demonstração e preparação de deploy — CONCLUÍDA
+
+Execução de 09/09/2026 do prompt `docs/prompts/prontidao-demonstracao-e-deploy.md`. Esta entrega não declara as Etapas 9–11 integralmente concluídas; fecha somente o caminho necessário para demonstrar com segurança o caso já implementado e prepara o empacotamento do próximo deploy.
+
+### Entregas
+
+- [x] `pnpm demo:verify` somente leitura, com falha explícita quando configuração, IA, banco, TP-039, proveniência, equipamento ou estado fresco do incidente não atendem ao roteiro.
+- [x] Caso oficial comprovado no banco: 55 pontos, 19 marcadores reservados, TP-039 em 75,6 °C/ΔT 35,6 °C, score 85, Prediction rastreável e incidente `PENDING_HUMAN_REVIEW` sem OS.
+- [x] Dockerfile construído a partir da raiz do monorepo, treinando e validando o `.joblib` ignorado pelo Git antes de iniciar o FastAPI.
+- [x] `.dockerignore` impede envio de segredos, ambientes locais, dependências Node, caches e dados brutos desnecessários.
+- [x] Um único cron Vercel diário em `/api/cron/daily-maintenance`, reunindo scheduler preventivo e lote térmico com isolamento de falhas.
+- [x] Endpoints antigos de cron preservados apenas para compatibilidade/manual, sem agendamento automático.
+- [x] Testes unitários cobrem autenticação, chamada única das duas rotinas, resposta estruturada e comportamento fail-closed.
+
+### Limites deliberados
+
+- O backlog térmico não é processado integralmente nesta entrega; ele aparece como aviso no pré-voo e o cron continua em lotes limitados/idempotentes.
+- Revisão humana e OS não são criadas pelo verificador: esses registros auditáveis ficam reservados para a apresentação.
+- Repetição integral exige outro banco/branch demonstrativo; não existe limpeza automática de histórico.
+- Telemetria física, relatórios antes/depois, feedback técnico completo, E2E visual versionado e piloto real mantêm seus escopos nas Etapas 9–12.
+- O build Docker real não pôde ser executado na sessão porque o comando `docker` não está instalado; treino/validação local, testes Python e validação estática do contexto são as verificações disponíveis até o deploy.
 
 ---
 

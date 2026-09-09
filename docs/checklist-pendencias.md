@@ -12,9 +12,12 @@
 - [ ] Configurar `NEXTAUTH_URL` com o domínio real de produção
 - [ ] Revisar CORS do FastAPI (`CORS_ORIGINS` em `services/predictive-ai/.env`) para aceitar apenas o domínio de produção do Next.js
 - [ ] Definir estratégia de deploy do FastAPI (hoje só tem Dockerfile — decidir: Railway, Fly.io, Cloud Run, VM própria, etc.)
-- [ ] Definir estratégia de deploy do Next.js — **parcialmente decidido**: existe `vercel.json` com a configuração de Cron Job do scheduler de OS preventivas, o que pressupõe Vercel, mas nenhum deploy foi de fato realizado
+- [x] Garantir que o build do FastAPI recupere o modelo ignorado pelo Git — Dockerfile usa a raiz, treina e valida o bundle/checksum; build real aguarda ambiente com Docker/serviço de deploy
+- [ ] Definir estratégia de deploy do Next.js — **parcialmente decidido**: `vercel.json` agora possui um único cron diário agregando scheduler preventivo e processamento térmico, mas nenhum deploy foi realizado
 - [ ] Habilitar HTTPS/TLS entre Next.js e FastAPI se não estiverem na mesma rede privada
-- [ ] **[NOVO] O projeto não é um repositório git** — não existe `.git` na raiz. Nada do que foi implementado está commitado/versionado em lugar nenhum. Isso precisa ser resolvido antes de qualquer deploy, CI ou trabalho em equipe (`git init`, primeiro commit, remoto)
+- [x] Projeto versionado em Git, branch `main`, com remoto `origin` configurado
+- [x] Pré-voo somente leitura `pnpm demo:verify` valida IA, banco, TP-039 e estado fresco do roteiro antes da apresentação
+- [x] Consolidar automações Vercel em uma única execução diária autenticada
 
 ## 🟣 Machine Learning — dataset e modelo (novo desde a última revisão)
 
@@ -97,7 +100,7 @@
 - [ ] Configurar connection pooling adequado do Prisma para o Neon (verificar `connection_limit` na `DATABASE_URL` pooled)
 - [x] ~~Adicionar `loading.tsx`/`error.tsx` do App Router nas rotas principais para melhor streaming/UX~~ — feito (ver seção UI/UX acima)
 - [ ] Avaliar mover gráficos do Recharts para client components mais isolados (hoje toda a página do dashboard é Server Component, o que é bom, mas vale revisar o bundle size do Recharts)
-- [ ] **[NOVO]** `next build` (produção) e `next dev` compartilham a mesma pasta `.next` — rodar um build de produção enquanto o dev server está no ar corrompe o cache do dev server (aconteceu mais de uma vez durante o desenvolvimento; precisou de `rm -rf .next` + restart). Não é um problema de produção real, mas vale documentar no README para quem for desenvolver localmente
+- [x] Build isolado documentado: `NEXT_DIST_DIR=.next-demo-build pnpm build` evita sobrescrever o cache `.next` de um `next dev` usado no ensaio
 
 ## 🟢 DevOps / qualidade contínua
 

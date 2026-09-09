@@ -2,7 +2,7 @@
 
 Sistema de manutenção preditiva termográfica com análise obrigatória por IA e confirmação humana antes da autorização de uma OS.
 
-> **Adequação GPMS 2026 — 08/09/2026:** Etapas 1–5 estruturalmente concluídas; Etapa 6 em validação; Etapa 7 concluída no escopo offline; e Etapa 8 implementada, aguardando apenas a carga/processamento autorizado no banco demonstrativo. O FastAPI executa um modelo térmico `SYNTHETIC_EXPERIMENTAL` verificável e não possui fallback por regras. Veja o [prompt executado da Etapa 8](docs/prompts/etapa-8-treinamento-integracao-fastapi.md) e o [registro técnico](docs/architecture.md#modelo-termográfico-e-fastapi-obrigatório-gpms-2026--adequação-etapa-8).
+> **Adequação GPMS 2026 — 09/09/2026:** o caso demonstrativo TP-039 já percorreu leitura, inferência real, Prediction e incidente crítico; permanece fresco para a revisão humana e criação da OS durante a apresentação. O FastAPI executa um modelo `SYNTHETIC_EXPERIMENTAL` verificável, sem fallback por regras. `pnpm demo:verify` comprova as pré-condições sem escrever no banco. Veja o [prompt de prontidão consumido](docs/prompts/prontidao-demonstracao-e-deploy.md) e o [registro técnico](docs/architecture.md#prontidão-da-demonstração-empacotamento-e-automação-diária--09092026).
 
 ## Propósito
 
@@ -73,6 +73,7 @@ DIRECT_URL="postgresql://.../pcm?sslmode=require"           # direct
 AUTH_SECRET="<gere com: openssl rand -base64 32>"
 NEXTAUTH_URL="http://localhost:3000"
 PREDICTIVE_AI_URL="http://localhost:8000"
+AI_SERVICE_URL="http://localhost:8000"                  # tem precedência
 AI_SERVICE_API_KEY="uma-chave-qualquer-compartilhada"
 ```
 
@@ -97,8 +98,9 @@ python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Os artefatos mecânicos antigos são preservados como histórico.
-# O modelo térmico real será integrado na Etapa 8; DEMO não habilita o fluxo térmico.
+# Gere e valide o bundle térmico quando ele ainda não existir.
+python -m training.train_thermal_models
+python -m training.validate_model_artifact
 
 uvicorn app.main:app --reload --port 8000
 ```
@@ -123,15 +125,38 @@ Acesse **http://localhost:3000** — você será redirecionado para `/login`.
 | TECHNICIAN | tecnico@pcm.local | tecnico123 |
 | MANAGER | gestor@pcm.local | gestor123 |
 
-## 7. Docker (opcional, apenas o serviço de IA)
+## 7. Pré-voo da demonstração
+
+Com FastAPI e banco acessíveis, execute na raiz:
+
+```bash
+pnpm demo:verify
+```
+
+O comando é somente leitura e deve retornar `status: "READY"`. Ele verifica readiness da IA, 55 pontos, 19 marcadores reservados, o caso TP-039 em 75,6 °C/ΔT 35,6 °C, proveniência da Prediction, vínculo com equipamento e um incidente ainda disponível para revisão humana e OS.
+
+Para validar um build enquanto o servidor de ensaio estiver aberto, use `NEXT_DIST_DIR=.next-demo-build pnpm build` (PowerShell: `$env:NEXT_DIST_DIR='.next-demo-build'; pnpm build`). Isso mantém o cache de `next dev` intacto.
+
+`AI_SERVICE_URL` tem precedência sobre `PREDICTIVE_AI_URL`. Se a porta 8000 estiver ocupada, suba o FastAPI em outra porta, ajuste as duas variáveis e reinicie o Next.js antes de rodar o pré-voo.
+
+Roteiro recomendado: login como ADMIN/PLANNER → `/thermal-monitoring` → TP-039 → incidente crítico → mostrar inferência/versão/checksum → confirmar defeito → criar OS preditiva. A revisão e a OS são registros auditáveis: o cenário fresco é consumido uma vez e não é apagado automaticamente. Para ensaios repetidos, use uma branch/banco Neon demonstrativo separado e preserve o banco da apresentação.
+
+## 8. Docker (serviço de IA)
 
 ```bash
 docker compose up predictive-ai
+
+# Ou construir explicitamente a partir da raiz do monorepo:
+docker build -f services/predictive-ai/Dockerfile -t predictive-ai .
 # Postgres local (opcional, alternativa ao Neon):
 docker compose --profile local-db up postgres
 ```
 
-O Next.js roda fora do Docker durante o desenvolvimento, conforme especificado no escopo do projeto.
+O contexto é a raiz porque o build usa os datasets processados para treinar e validar `thermal_model.joblib`, que não é versionado. O build falha se o artefato/checksum não for válido, e o Compose usa o bundle interno da imagem sem sobrescrevê-lo com um volume local. O Next.js roda fora do Docker durante o desenvolvimento.
+
+## 9. Automação diária na Vercel
+
+`apps/web/vercel.json` registra somente `GET /api/cron/daily-maintenance`, diariamente às 06:00 UTC. A chamada autenticada por `CRON_SECRET` executa, uma vez, o scheduler de OS preventivas e um lote limitado do processamento térmico. Os antigos endpoints específicos continuam disponíveis para operação manual/compatibilidade, mas não são agendados pela Vercel.
 
 ## Testes
 
@@ -218,9 +243,9 @@ O primeiro comando é uma carga pelo service de ingestão, não uma seed Prisma.
 
 ## Recursos pendentes (próximas fases)
 
-- Geração de PDF real dos relatórios (`@react-pdf/renderer`) — estrutura e navegação já prontas em `/reports`.
-- Scheduler automático para geração de OS preventivas (hoje é manual, por decisão explícita do escopo).
-- Faixas de risco configuráveis via UI (hoje centralizadas em código, conforme escopo permite para a v1).
+- Relatórios térmicos completos de incidente, painel, antes/depois e feedback da intervenção (Etapa 10).
+- Telemetria física autenticada, reconexão e teste de carga dos dispositivos (Etapa 9).
+- E2E versionado em navegador, hardening e performance para piloto controlado (Etapa 11).
 - Mais cobertura de testes: services que dependem do Prisma Client (ex.: `work-order.service.ts`, `alert.service.ts`) ainda não têm testes de integração — hoje cobrimos as regras de negócio puras (atraso, permissões, máquina de estados, validação de schemas). Recomenda-se testes de integração com um banco de teste depois que `prisma generate` rodar.
 
 ## Documentação adicional

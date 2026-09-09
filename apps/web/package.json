@@ -16,6 +16,7 @@
     "thermal:load-reserved": "tsx scripts/load-reserved-thermal-scenario.ts",
     "thermal:verify-ai": "tsx scripts/verify-thermal-ai-integration.ts",
     "thermal:verify-db-flow": "tsx scripts/verify-thermal-db-flow.ts",
+    "demo:verify": "tsx scripts/verify-demo-readiness.ts",
     "test": "vitest run"
   },
   "prisma": {

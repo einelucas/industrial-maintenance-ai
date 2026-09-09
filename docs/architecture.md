@@ -539,9 +539,27 @@ pnpm thermal:load-reserved -- --apply --allow-existing
 pnpm thermal:verify-db-flow
 ```
 
-Assim, treinamento, artefato, FastAPI e integração HTTP estão comprovados; a Prediction persistida e sua apresentação na interface permanecem pendentes da carga autorizada no banco. A validação visual da interface com resultado real também continua pendente.
+Assim, treinamento, artefato, FastAPI e integração HTTP estão comprovados. Em 09/09/2026 o banco demonstrativo também passou a conter uma Prediction rastreável e um incidente crítico do TP-039; a validação visual automatizada continua pendente porque não havia navegador disponível na sessão.
 
 Validação executada: **18 testes Python**, **325 testes TypeScript** em 33 arquivos, typecheck e lint completos sem erros, compilação Python e auditoria de isolamento do `ground truth`. O validador recalcula tanto o checksum bruto quanto o fingerprint semântico a partir do bundle antes de aprová-lo.
+
+## Prontidão da demonstração, empacotamento e automação diária — 09/09/2026
+
+O prompt `docs/prompts/prontidao-demonstracao-e-deploy.md` foi consumido para fechar o caminho operacional da apresentação sem ampliar o escopo para telemetria física ou piloto. `apps/web/scripts/verify-demo-readiness.ts` é o pré-voo oficial, somente leitura: carrega configuração sem exibir valores secretos, consulta readiness pelo gateway real e valida no PostgreSQL as pré-condições do roteiro. O comando diferencia um incidente fresco de um cenário já consumido e trata o backlog térmico como diagnóstico, nunca como uma autorização para escrever ou inventar resultados.
+
+O pré-voo real retornou `READY` com 55 pontos, 19 marcadores reservados, dois usuários apresentadores ativos e TP-039 vinculado a equipamento. A evidência persistida registrou 75,6 °C, ΔT 35,6 °C, score 85, modelo `SYNTHETIC_EXPERIMENTAL` e proveniência coerente. O incidente estava `PENDING_HUMAN_REVIEW`, sem revisão e sem OS. Nenhuma escrita foi executada pelo verificador.
+
+### Imagem reproduzível do FastAPI
+
+`thermal_model.joblib` permanece ignorado pelo Git. Para que um checkout limpo não produza uma imagem sem modelo, o Dockerfile agora exige a raiz do monorepo como contexto, copia somente o serviço e os datasets necessários e executa treino + validação durante o build. Qualquer falha impede a criação da imagem. O `.dockerignore` exclui `.env`, ambientes virtuais, dependências Node, caches, dados brutos e artefatos locais desnecessários. `docker-compose.yml` usa o mesmo contexto e caminho de runtime.
+
+O build real da imagem não foi executado nesta sessão porque o executável Docker não está instalado. A validação definitiva fica para o serviço de deploy; o comando canônico é `docker build -f services/predictive-ai/Dockerfile -t predictive-ai .`.
+
+### Uma execução automática diária
+
+`vercel.json` contém um único agendamento, `GET /api/cron/daily-maintenance` às 06:00 UTC. O endpoint exige `Authorization: Bearer CRON_SECRET` e chama sequencialmente a geração de OS preventivas vencidas e o backfill térmico limitado. Cada resultado é isolado e retornado no mesmo relatório (`SUCCEEDED`, `PARTIAL_FAILURE` ou `FAILED`). Indisponibilidade da IA aparece como `BLOCKED`: nenhuma Prediction alternativa é criada e o resultado preventivo continua visível. Os dois endpoints específicos anteriores continuam acessíveis para compatibilidade/manual, mas não consomem agenda automática.
+
+O cenário fresco é deliberadamente de uso único: confirmação e OS são auditoria real e não são apagadas para repetir apresentações. Ensaios completos devem usar branch/banco demonstrativo separado.
 
 ## Limitação histórica do ambiente de construção original
 

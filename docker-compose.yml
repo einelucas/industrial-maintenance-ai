@@ -24,15 +24,13 @@ services:
 
   predictive-ai:
     build:
-      context: ./services/predictive-ai
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/predictive-ai/Dockerfile
     container_name: pcm-predictive-ai
     env_file:
       - ./services/predictive-ai/.env
     ports:
       - "8000:8000"
-    volumes:
-      - ./services/predictive-ai/models:/app/models
 
 volumes:
   pcm_postgres_data:
