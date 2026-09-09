@@ -573,6 +573,12 @@ autorização da aplicação. No painel Vercel essas duas URLs devem permanecer
 ausentes, pois uma variável criada manualmente teria precedência sobre o valor
 gerado pela plataforma.
 
+O middleware global de autenticação foi removido porque o Vercel Services não
+aceita output Edge no serviço Next.js. A proteção permanece no runtime Node:
+o layout `(dashboard)` exige sessão antes de renderizar qualquer tela, cada
+rota de relatório exige permissão explicitamente, os crons exigem
+`CRON_SECRET` e os handlers do Auth.js permanecem públicos por definição.
+
 ### Uma execução automática diária
 
 `vercel.json` contém um único agendamento, `GET /api/cron/daily-maintenance` às 06:00 UTC. O endpoint exige `Authorization: Bearer CRON_SECRET` e chama sequencialmente a geração de OS preventivas vencidas e o backfill térmico limitado. Cada resultado é isolado e retornado no mesmo relatório (`SUCCEEDED`, `PARTIAL_FAILURE` ou `FAILED`). Indisponibilidade da IA aparece como `BLOCKED`: nenhuma Prediction alternativa é criada e o resultado preventivo continua visível. Os dois endpoints específicos anteriores continuam acessíveis para compatibilidade/manual, mas não consomem agenda automática.
