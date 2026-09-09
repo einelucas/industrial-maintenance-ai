@@ -75,6 +75,7 @@ const VALID_PREDICTION_BODY = {
   modelVersion: "thermal-synth-2026.09.01",
   modelChecksum: "sha256:" + "a".repeat(64),
   modelStage: "SYNTHETIC_EXPERIMENTAL",
+  supervisedFailureProbability: 0.73,
   modelScore: 92.8,
   riskScore: 96.4,
   riskLevel: "CRITICAL",
@@ -197,6 +198,7 @@ describe("thermalAiGateway.predictThermal — fail-closed", () => {
     const result = await thermalAiGateway.predictThermal(validRequest());
     expect(result.inferenceId).toBe("inf-1");
     expect(result.riskLevel).toBe("CRITICAL");
+    expect(result.supervisedFailureProbability).toBe(0.73);
   });
 
   it("todo erro lançado é uma instância de AiGatewayError com uma mensagem sanitizada (sem URL/API key)", async () => {

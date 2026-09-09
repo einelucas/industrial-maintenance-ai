@@ -2,12 +2,21 @@ import { z } from "zod";
 
 const MONITORING_MODES = ["MANUAL", "CSV", "SIMULATOR", "POINT_SENSOR", "THERMAL_ARRAY", "THERMAL_CAMERA"] as const;
 
+const emptyToUndefined = (value: unknown) =>
+  value === "" || value === null || value === undefined ? undefined : value;
+
 const optionalFiniteNumber = (message: string) =>
+  z.preprocess(emptyToUndefined, z.coerce.number().finite(message).optional());
+
+const optionalEmissivity = z.preprocess(
+  emptyToUndefined,
   z.coerce
     .number()
-    .finite(message)
+    .finite("Emissividade deve ser um número válido.")
+    .gt(0, "Emissividade deve ser maior que zero.")
+    .lte(1, "Emissividade deve ser no máximo 1.")
     .optional()
-    .or(z.literal("").transform(() => undefined));
+);
 
 // Domínio termográfico (GPMS 2026 / Etapa 3) — AI-first. Este schema é a
 // ÚNICA porta de entrada pública para cadastrar/editar um ThermalPoint e,
@@ -25,13 +34,7 @@ export const thermalPointSchema = z
     monitoringMode: z.enum(MONITORING_MODES, {
       errorMap: () => ({ message: "Selecione um modo de monitoramento válido." }),
     }),
-    emissivity: z.coerce
-      .number()
-      .finite("Emissividade deve ser um número válido.")
-      .gt(0, "Emissividade deve ser maior que zero.")
-      .lte(1, "Emissividade deve ser no máximo 1.")
-      .optional()
-      .or(z.literal("").transform(() => undefined)),
+    emissivity: optionalEmissivity,
     referenceDescription: z.string().max(300).trim().optional().or(z.literal("")),
     absoluteLimitC: optionalFiniteNumber("Limite absoluto deve ser um número válido."),
     deltaTAttentionC: optionalFiniteNumber("Limite de atenção (ΔT) deve ser um número válido."),

@@ -168,6 +168,7 @@ class ThermalMlPredictor:
         return ThermalInferenceResponse(
             inferenceId=f"thermal-{identity[:32]}", inferenceRequestId=payload.inference_request_id,
             modelVersion=self.model_version, modelChecksum=self.model_checksum, modelStage=self.model_stage,
+            supervisedFailureProbability=round(supervised_probability, 6),
             modelScore=round(model_score, 4), riskScore=round(risk_score, 4), riskLevel=risk_level,
             confidence=round(max(supervised_probability, 1.0 - supervised_probability), 6),
             predictedFailureMode=cause,

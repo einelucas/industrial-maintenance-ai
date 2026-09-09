@@ -67,6 +67,9 @@ describe.skipIf(!TEST_DATABASE_URL)("Orquestração AI-first — integração Po
       modelVersion: READY_HEALTH_BODY.modelVersion,
       modelChecksum: READY_HEALTH_BODY.modelChecksum,
       modelStage: "SYNTHETIC_EXPERIMENTAL",
+      // O piso crítico pode elevar o risco mesmo com probabilidade
+      // supervisionada baixa; os dois valores não podem ser confundidos.
+      supervisedFailureProbability: 0.04,
       modelScore: 92.8,
       riskScore: 96.4,
       riskLevel: "CRITICAL",
@@ -265,6 +268,8 @@ describe.skipIf(!TEST_DATABASE_URL)("Orquestração AI-first — integração Po
     expect(prediction.thermalPointId).toBe(point.id);
     expect(prediction.riskLevel).toBe("CRITICAL");
     expect(prediction.modelScore).toBe(92.8);
+    expect(prediction.failureProbability).toBe(0.04);
+    expect(prediction.predictedClass).toBe(0);
     expect(prediction.inferenceId).toBe(`inf-${targetReading.id}`);
     expect(prediction.featureVersion).toBe(THERMAL_FEATURE_VERSION);
     expect(prediction.equipmentId).toBeNull(); // Prediction nunca herda equipmentId sozinha

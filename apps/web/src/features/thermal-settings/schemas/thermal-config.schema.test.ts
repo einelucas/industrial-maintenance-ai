@@ -29,6 +29,20 @@ describe("componentTypeThermalConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("trata overrides vazios como ausência, nunca como zero", () => {
+    const result = componentTypeThermalConfigSchema.parse({
+      componentType: "CONTACTOR",
+      absoluteLimitC: "",
+      deltaTAttentionC: "",
+      deltaTHighC: "",
+      deltaTCriticalC: "",
+    });
+    expect(result.absoluteLimitC).toBeUndefined();
+    expect(result.deltaTAttentionC).toBeUndefined();
+    expect(result.deltaTHighC).toBeUndefined();
+    expect(result.deltaTCriticalC).toBeUndefined();
+  });
+
   it("rejeita tipo de componente inválido", () => {
     expect(componentTypeThermalConfigSchema.safeParse({ componentType: "MOTOR" }).success).toBe(false);
   });

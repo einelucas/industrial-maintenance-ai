@@ -1,8 +1,21 @@
-import type { AnalysisStatus, DeviceStatus, MonitoringMode, Prediction, RiskLevel } from "@prisma/client";
+import type { AnalysisStatus, DeviceStatus, MonitoringMode, Prediction, RiskLevel, ThermalCause } from "@prisma/client";
 import { thermalInferenceResponseSchema } from "@/features/ai-core/schemas/thermal-inference-response.schema";
 import type { AiCoreStateStatus } from "@/features/ai-core/services/ai-core-state.service";
 
 export const RISK_LABELS: Record<RiskLevel, string> = { LOW: "Normal", MODERATE: "Atenção", HIGH: "Alto", CRITICAL: "Crítico" };
+export const THERMAL_CAUSE_LABELS: Record<ThermalCause, string> = {
+  LOOSE_CONNECTION: "Conexão frouxa",
+  CONTACT_RESISTANCE: "Resistência elevada de contato",
+  OVERLOAD: "Sobrecarga",
+  PHASE_IMBALANCE: "Desequilíbrio entre fases",
+  DEGRADED_CONTACT: "Contato degradado",
+  INSUFFICIENT_VENTILATION: "Ventilação insuficiente",
+  THERMAL_RELAY_DEGRADATION: "Degradação de relé térmico",
+  PROCESS_CONDITION: "Condição do processo",
+  SENSOR_ERROR: "Possível erro de sensor",
+  NOT_CONFIRMED: "Não confirmado",
+  OTHER: "Outra hipótese",
+};
 export const CONNECTIVITY_LABELS = {
   ONLINE: "Com comunicação", OFFLINE: "Sem comunicação", DEGRADED: "Comunicação degradada",
   NOT_APPLICABLE: "Coleta manual / importada / simulada", UNPROVISIONED: "Sem dispositivo ativo",
@@ -26,6 +39,7 @@ export function isTraceablePrediction(prediction: TraceablePrediction): boolean 
   return thermalInferenceResponseSchema.safeParse({
     inferenceId: prediction.inferenceId, inferenceRequestId: prediction.inferenceRequestId,
     modelVersion: prediction.modelVersion, modelChecksum: prediction.modelChecksum, modelStage: prediction.modelStage,
+    supervisedFailureProbability: prediction.failureProbability,
     modelScore: prediction.modelScore, riskScore: prediction.riskScore, riskLevel: prediction.riskLevel,
     confidence: prediction.confidence, predictedFailureMode: prediction.predictedFailureMode,
     failureModeConfidence: prediction.failureModeConfidence, explanations: prediction.explanations,

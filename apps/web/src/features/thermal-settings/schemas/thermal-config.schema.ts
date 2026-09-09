@@ -43,12 +43,10 @@ export const globalThermalConfigSchema = z
 export type GlobalThermalConfigInput = z.infer<typeof globalThermalConfigSchema>;
 
 const optionalPositiveNumber = (message: string) =>
-  z.coerce
-    .number()
-    .finite(message)
-    .positive(message)
-    .optional()
-    .or(z.literal("").transform(() => undefined));
+  z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? undefined : value),
+    z.coerce.number().finite(message).positive(message).optional()
+  );
 
 // Override por tipo de componente: todos os limites são opcionais (só
 // sobrescreve o que for informado; o resto continua caindo para o próximo

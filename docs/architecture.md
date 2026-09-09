@@ -327,7 +327,7 @@ apps/web/src/features/thermal-readings/
 
 ### Bug real encontrado e corrigido: "vazio vira zero"
 
-O padrão já usado desde a Etapa 3 para campo numérico opcional (`z.coerce.number().optional().or(z.literal(""))`) tem uma falha: `z.coerce.number()` executa `Number("")`, que resulta em `0` — um número finito válido — **antes** do `.or(literal(""))` ter qualquer chance de agir, então o primeiro ramo da união já "vence" com o valor `0`. Um teste voltado exatamente para o requisito "vazio ≠ ausência ≠ zero" pegou isso. Corrigido em `thermal-reading-measurement.schema.ts` com `z.preprocess((v) => (v === "" ? undefined : v), ...)`, que converte a string vazia para `undefined` **antes** da coerção numérica rodar. O mesmo padrão antigo (potencialmente com a mesma falha) continua em uso nos schemas da Etapa 3 (`thermal-point.schema.ts`, `thermal-config.schema.ts`) — não foi alterado nesta etapa por estar fora do escopo pedido, mas é um risco conhecido a corrigir se algum desses formulários passar a depender de "campo vazio realmente vira ausência".
+O padrão já usado desde a Etapa 3 para campo numérico opcional (`z.coerce.number().optional().or(z.literal(""))`) tinha uma falha: `z.coerce.number()` executa `Number("")`, que resulta em `0`, antes do segundo ramo da união. A Etapa 4 corrigiu primeiro o núcleo de medições. No fechamento pré-Etapa 9, o mesmo `z.preprocess` foi aplicado também a `thermal-point.schema.ts` (incluindo emissividade) e `thermal-config.schema.ts`; testes agora provam que vazio vira ausência, nunca zero.
 
 ### Simulador de leituras — cenários e o caso `SENSOR_OFFLINE`
 
@@ -525,6 +525,36 @@ O treinamento fixa seeds, hash seed e pools numéricos em uma thread. Um retrein
 Os schemas Pydantic usam aliases camelCase, rejeitam campos extras, NaN/infinito, UUIDs inválidos, thresholds fora de ordem e valores fora de faixa. O gateway Zod exige `ready`, tipo térmico, estágio permitido, checksum bem formado, feature version compatível e declaração da origem sintética. O request contém apenas leitura, janelas, baseline, thresholds e qualidade; nenhum target ou manifesto é importado no runtime.
 
 O `modelScore` só é calculado depois de `predict_proba` supervisionado válido. O piso de engenharia pode elevar `riskScore` depois disso, sem alterar `modelScore`. Para o caso 75,6/40/35,6 executado por HTTP real, o modelo retornou `modelScore = 10,0867`; o limite crítico elevou `riskScore` para 85 e `riskLevel = CRITICAL`, com explicação explícita do piso posterior à inferência.
+
+No fechamento pré-Etapa 9, o contrato passou a retornar também
+`supervisedFailureProbability`. `confidence` permanece a confiança da classe
+supervisionada escolhida, não a probabilidade de defeito; `modelScore` é o
+ensemble ML e `riskScore` é a decisão operacional após pisos de engenharia. O
+orquestrador persiste `Prediction.failureProbability` e `predictedClass` a
+partir da saída supervisionada, evitando confundir risco operacional com
+probabilidade estatística. A interface usa rótulos separados e apresenta a
+causa como hipótese para revisão humana.
+
+### Fechamento das Etapas 1–8 antes da telemetria
+
+O prompt `docs/prompts/fechamento-etapas-1-a-8.md` foi consumido em 09/09/2026.
+As capturas do deploy fornecidas pelo usuário validaram em desktop o dashboard,
+o detalhe do ponto, os gráficos, a evidência e a identificação explícita de
+dados/modelo sintéticos. O eixo dos gráficos passou a usar timestamps reais,
+deixando intervalos sem medição proporcionais no tempo.
+
+Validação executada: 338 testes TypeScript aprovados, 44 integrações com banco
+isolado ignoradas por ausência de `TEST_DATABASE_URL`, 18 testes Python
+aprovados, typecheck e lint sem erros e build de produção do Next.js aprovado.
+O wrapper `npm run build` encontrou uma DLL do Prisma bloqueada por processos
+Node existentes no Windows; nenhum processo do usuário foi encerrado e o build
+foi validado com o Prisma Client já gerado por `npx next build`.
+
+As pendências restantes não bloqueiam a Etapa 9: E2E versionado, validação
+mobile/teclado, testes de carga e indisponibilidade completa pertencem à Etapa
+11; relatórios/pós-ação à Etapa 10; dados reais e calibração industrial à Etapa
+12. Segredos e URLs de produção continuam sendo configuração externa e nunca
+devem ser versionados.
 
 O caminho real `thermalAiGateway -> GET health -> POST predict -> FastAPI -> bundle sklearn` foi executado localmente sem mock. Readiness retornou `SYNTHETIC_EXPERIMENTAL`, versão `thermal-2026.09.08-b011c805c78a` e o checksum publicado. O `inferenceRequestId` foi preservado e a resposta passou pelo schema Zod estrito.
 

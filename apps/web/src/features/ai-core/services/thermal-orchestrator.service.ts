@@ -163,9 +163,11 @@ export const thermalOrchestratorService = {
     const { prediction, reading } = await prisma.$transaction(async (tx) => {
       const created = await tx.prediction.create({
         data: {
-          failureProbability: response.riskScore / 100,
+          // Campo legado obrigatório de Prediction, agora preserva a
+          // probabilidade supervisionada real em vez do score operacional.
+          failureProbability: response.supervisedFailureProbability,
           riskLevel: response.riskLevel,
-          predictedClass: response.riskLevel === "LOW" ? 0 : 1,
+          predictedClass: response.supervisedFailureProbability >= 0.5 ? 1 : 0,
           modelVersion: response.modelVersion,
           inputSnapshot: toJsonValue(payload),
           featuresUsed: toJsonValue(features),

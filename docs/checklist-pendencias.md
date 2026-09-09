@@ -5,6 +5,19 @@
 > Itens `[ ]` continuam pendentes. Onde um item foi parcialmente resolvido,
 > isso está explicado no próprio texto em vez de marcado como concluído.
 
+## Fechamento térmico antes da Etapa 9 — 09/09/2026
+
+- [x] Etapas 1–8 encerradas no escopo necessário para iniciar telemetria.
+- [x] Campos numéricos térmicos opcionais vazios não viram mais zero.
+- [x] Probabilidade supervisionada, confiança da classe, score ML e risco
+  operacional possuem semânticas separadas no contrato e na persistência.
+- [x] Hipóteses de falha e scores possuem rótulos operacionais claros na UI.
+- [x] Gráficos usam eixo temporal proporcional e deixam lacunas identificáveis.
+- [x] Validação desktop no deploy registrada a partir das capturas do usuário.
+- [ ] Mobile/teclado e E2E versionado — Etapa 11, não bloqueia a Etapa 9.
+- [ ] Teste de carga, rate limiting e reconexão — escopo das Etapas 9/11.
+- [ ] Validação com dados reais da planta — Etapa 12.
+
 ## 🔴 Bloqueadores para produção (fazer antes de qualquer deploy real)
 
 - [x] ~~Rodar `npx prisma generate` + `npx prisma migrate dev`~~ — feito repetidas vezes com sucesso (internet confirmada disponível no ambiente). **Atenção:** `prisma migrate dev` falha neste projeto com um erro do Neon (`P1001` / "terminating connection due to administrator command") ao criar o shadow database — é uma limitação conhecida do Neon com múltiplos databases no mesmo branch, não falta de internet. Workaround usado em todas as migrations desta fase: `prisma db push` (aplica o schema direto) + arquivo de migration escrito manualmente + `prisma migrate resolve --applied` (mantém o histórico de migrations consistente). Documentar esse processo formalmente é o item que falta (ver seção DevOps).

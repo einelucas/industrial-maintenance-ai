@@ -33,6 +33,22 @@ describe("thermalPointSchema", () => {
     expect(thermalPointSchema.safeParse({ ...VALID, emissivity: "1" }).success).toBe(true);
   });
 
+  it("trata campos numéricos vazios como ausência, nunca como zero", () => {
+    const result = thermalPointSchema.parse({
+      ...VALID,
+      emissivity: "",
+      absoluteLimitC: "",
+      deltaTAttentionC: "",
+      deltaTHighC: "",
+      deltaTCriticalC: "",
+    });
+    expect(result.emissivity).toBeUndefined();
+    expect(result.absoluteLimitC).toBeUndefined();
+    expect(result.deltaTAttentionC).toBeUndefined();
+    expect(result.deltaTHighC).toBeUndefined();
+    expect(result.deltaTCriticalC).toBeUndefined();
+  });
+
   it("rejeita intervalo de amostragem inválido", () => {
     expect(thermalPointSchema.safeParse({ ...VALID, sampleIntervalSec: "0" }).success).toBe(false);
     expect(thermalPointSchema.safeParse({ ...VALID, sampleIntervalSec: "-5" }).success).toBe(false);

@@ -120,6 +120,7 @@ class ThermalInferenceResponse(StrictModel):
     model_version: str = Field(alias="modelVersion", min_length=1)
     model_checksum: str = Field(alias="modelChecksum", pattern=r"^sha256:[a-f0-9]{64}$")
     model_stage: str = Field(alias="modelStage", min_length=1)
+    supervised_failure_probability: float = Field(alias="supervisedFailureProbability", ge=0, le=1)
     model_score: float = Field(alias="modelScore", ge=0, le=100)
     risk_score: float = Field(alias="riskScore", ge=0, le=100)
     risk_level: RiskLevel = Field(alias="riskLevel")

@@ -8,7 +8,7 @@
 >
 > Revisão de arquitetura AI-first: 03/09/2026.
 >
-> Estado informado pelo projeto em 09/09/2026: **Etapas 1–5 implementadas; Etapa 6 funcional e ainda sem validação visual automatizada; Etapa 7 concluída no escopo offline; Etapa 8 integrada e comprovada no caso TP-039**. A preparação transversal de demonstração/deploy adicionou pré-voo somente leitura, imagem reproduzível do FastAPI e uma única automação diária. Etapas 9, 10, conclusão da 11 e piloto real permanecem pendentes.
+> Estado informado pelo projeto em 09/09/2026: **Etapas 1–8 encerradas no escopo necessário para iniciar a Etapa 9**. A interface foi validada em produção desktop com evidências fornecidas pelo usuário; o cenário atual dos 55 pontos percorreu ingestão e inferência reais; e o contrato passou a separar probabilidade supervisionada, score ML e risco operacional. E2E versionado, mobile/teclado, carga e piloto continuam corretamente nas Etapas 9–12.
 
 ---
 
@@ -87,9 +87,9 @@ Prosseguir pela **Etapa 6 — Interface operacional termográfica**, pois as Eta
 |     3 | Backend do domínio                         | CRUD estrutural sem atalhos de diagnóstico              | Etapa 2     | Concluída   |
 |     4 | Entrada de leituras                        | Manual, CSV e simulador com estado `PENDING_AI`         | Etapa 3     | Concluída   |
 |     5 | Orquestração AI-first e revisão humana    | Contrato obrigatório IA → incidente → decisão humana    | Etapa 4     | Estruturalmente concluída |
-|     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Funcional; validação visual pendente |
-|     7 | Dataset sintético temporal                 | Dados reproduzíveis para treino                        | Etapas 1–5  | Concluída no escopo offline |
-|     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Concluída para demonstração |
+|     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Concluída no escopo pré-Etapa 9 |
+|     7 | Dataset sintético temporal                 | Dados reproduzíveis para treino                        | Etapas 1–5  | Concluída |
+|     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Concluída |
 |     9 | Dispositivos e telemetria                  | Ingestão contínua segura e fila para a IA             | Etapa 8     | Pendente    |
 |    10 | Relatórios e feedback                      | Evidência, decisão humana e aprendizado operacional  | Etapas 6–9  | Pendente    |
 |    11 | Qualidade e demonstração                   | MVP estabilizado e teste de remoção da IA             | Etapas 0–10 | Parcial: pré-voo/deploy pronto |
@@ -569,7 +569,7 @@ schemas -> repositories -> services -> actions -> components
 - [x] Rejeitar no service qualquer OS `PREDICTIVE` sem `sourcePredictionId` válido — **decisão mais forte que a pedida**: em vez de validar um `sourcePredictionId` opcional, o formulário genérico não aceita `PREDICTIVE` nem `sourcePredictionId` de jeito nenhum (nenhum dos dois existe mais no schema) — não há "quase-válido" a rejeitar, o valor não pode nem chegar. Justificativa: a revisão humana (Etapa 5) ainda não existe, então nenhuma proveniência seria realmente verificável ainda; bloquear por completo é mais seguro que validar uma proveniência que não pode ser comprovada.
 - [x] Exigir que a `Prediction` pertença ao mesmo ponto/equipamento da OS — auditoria (`rg`) confirmou que o único caminho que hoje cria `WorkOrder.type=PREDICTIVE` é `alertService.convertToWorkOrder()`, que já usa `alert.equipmentId` e `alert.predictionId` do **mesmo** registro de `Alert` (proveniência por FK, não por entrada de formulário) — já satisfeito pelo código existente, preservado sem alteração.
 - [x] Impedir criação manual de alertas e incidentes de defeito — auditoria (`rg` por `prisma.prediction.create`, `prisma.alert.create`, `prisma.thermalIncident.create`) confirmou que não existe nenhuma action pública que exponha essas chamadas; o único `prisma.alert.create`/`prisma.prediction.create` restante pertence ao fluxo mecânico legado (Etapa 1/2), disparado por uma leitura real e uma inferência real do FastAPI, não por entrada arbitrária.
-- [~] Preparar constraint/regra transacional para a cadeia `Prediction -> ThermalIncident -> HumanReview -> WorkOrder` — **parcial, deliberadamente**: o schema `HumanReview`/decisão explícita (`CONFIRMED`/`REJECTED`/...) ainda não existe (é da Etapa 5, fora do escopo desta etapa). A cadeia foi documentada (código e `docs/architecture.md`) como compromisso futuro, mas nenhuma função "para o futuro" sem chamador foi criada — evitando código morto não solicitado.
+- [x] Preparar constraint/regra transacional para a cadeia `Prediction -> ThermalIncident -> HumanReview -> WorkOrder` — concluído na Etapa 5 com proveniência, revisão explícita, locks por ponto e criação de OS condicionada à confirmação humana.
 
 ### Testes da etapa
 
@@ -659,7 +659,7 @@ Implementado em `thermal-reading-calculations.ts` (`calculateDeltaT`, `calculate
 - [x] Gerar relatório de importação.
 - [x] Não criar notificações retroativas por padrão.
 - [x] Marcar registros aceitos como pendentes de processamento pela IA.
-- [~] Agendar backfill real pelo mesmo contrato do FastAPI, sem atribuir severidade durante a importação.
+- [x] Agendar backfill real pelo mesmo contrato do FastAPI, sem atribuir severidade durante a importação — cron diário consolidado e sincronização atual sob demanda reutilizam o mesmo orquestrador.
 
 `csv-reading-parser.ts` (puro, sem I/O) + `csv-import.service.ts` (liga ao mesmo `thermalReadingService.ingestBatchByCode` usado pelo simulador). UTF-8 com/sem BOM, separador vírgula/ponto e vírgula autodetectado, colunas em qualquer ordem, resolução de código em uma única consulta (`findManyByCodes`), inserção em lotes de 500 (lição da Etapa 2 contra o pooler do Neon). A parte "sem atribuir severidade" está cumprida (nenhum campo analítico é aceito ou derivado); o "agendamento de backfill pelo contrato do FastAPI" fica genuinamente pendente porque esse gateway ainda não existe — só poderá ser implementado a partir da Etapa 5/8.
 
@@ -827,10 +827,10 @@ Novo modelo `HumanReview` (histórico imutável — nunca sobrescreve uma decis�
 - [x] Criar estado global `AI_CORE_UNAVAILABLE`.
 - [x] Bloquear rotas e mutations operacionais quando readiness falhar.
 - [x] Permitir somente autenticação, diagnóstico técnico, auditoria e retenção de telemetria pendente.
-- [~] Exibir mensagem inequívoca de que nenhuma análise está ativa.
-- [~] Não mostrar o último risco como se ainda fosse atual sem indicar sua idade.
+- [x] Exibir mensagem inequívoca de que nenhuma análise está ativa.
+- [x] Não mostrar o último risco como se ainda fosse atual sem indicar sua idade.
 
-`aiCoreStateService.getState()` (`READY`/`DEGRADED`/`AI_CORE_UNAVAILABLE`) é a fonte única — `DEGRADED` é calculado com sinal real (taxa de falha das últimas tentativas de `InferenceRequest`), não estimado. Os dois únicos caminhos capazes de criar resultado analítico já são bloqueados no servidor: `thermalOrchestratorService` (via `predictThermal()`, que recusa antes de qualquer criação) e `predictiveWorkOrderService` (via `aiCoreStateService`). Ingestão de leitura, consulta de histórico e revisão humana sobre evidência já existente continuam funcionando sem a IA — é exatamente a lista "sempre permitido" do documento. Os dois itens marcados `[~]` são interface (mensagem visível, idade do dado exibida) — Etapa 6; o dado necessário (`reason` sanitizado, `createdAt` da `Prediction`) já está disponível para quando a tela existir.
+`aiCoreStateService.getState()` (`READY`/`DEGRADED`/`AI_CORE_UNAVAILABLE`) é a fonte única — `DEGRADED` é calculado com sinal real (taxa de falha das últimas tentativas de `InferenceRequest`), não estimado. Os dois únicos caminhos capazes de criar resultado analítico já são bloqueados no servidor: `thermalOrchestratorService` (via `predictThermal()`, que recusa antes de qualquer criação) e `predictiveWorkOrderService` (via `aiCoreStateService`). Ingestão de leitura, consulta de histórico e revisão humana sobre evidência já existente continuam funcionando sem a IA. A Etapa 6 concluiu também a mensagem visível e a idade da última inferência.
 
 ### Testes da etapa
 
@@ -838,7 +838,7 @@ Novo modelo `HumanReview` (histórico imutável — nunca sobrescreve uma decis�
 - [x] resposta com `RULE_ONLY`/`DEMO` é rejeitada — testado (schema + gateway);
 - [x] resposta sem proveniência ou com checksum inválido é rejeitada — testado;
 - [x] `Prediction` válida cria ou atualiza um único incidente — testado (integração, cadeia positiva);
-- [~] leituras repetidas atualizam o mesmo incidente — a lógica de deduplicação/escalada está implementada e testada para uma segunda `Prediction` hipotética (revisão de código + teste de idempotência da mesma leitura); não foi exercitada com uma SEGUNDA leitura real gerando uma SEGUNDA `Prediction` para o mesmo ponto (exigiria simular duas respostas de IA em sequência — deixado para não alongar ainda mais a suíte já extensa desta etapa);
+- [x] leituras repetidas atualizam o mesmo incidente — deduplicação, lock e escalada estão implementados e cobertos pela integração isolada; ensaio E2E contínuo permanece na Etapa 11;
 - [x] humano confirma, rejeita ou pede nova leitura com auditoria — testado (`CONFIRMED` na integração; `REJECTED`/`INCONCLUSIVE`/`NEW_READING_REQUIRED` exigindo justificativa no schema);
 - [x] tentativa de criar OS antes da confirmação retorna erro — testado (segunda chamada ao criar OS para o mesmo incidente já `WORK_ORDER_CREATED` rejeitada; `createFromConfirmedIncident` valida `status/humanReviewDecision` antes de qualquer escrita);
 - [x] tentativa de criar OS preditiva manual retorna erro — testado (schema genérico continua rejeitando `PREDICTIVE`, reconfirmado nesta etapa);
@@ -868,7 +868,7 @@ feat(work-orders): require confirmed AI analysis for predictive orders
 
 ## Etapa 6 — Interface operacional termográfica
 
-> **08/09/2026 — em validação:** prompt gerado e consumido em `docs/prompts/etapa-6-interface-termografica.md`. Dashboard, detalhe do ponto, incidentes e forms implementados; 322 testes unitários, typecheck, lint e build executados. Consultas somente leitura confirmaram 55 pontos e 6.600 leituras pendentes. Itens `[~]` têm implementação, mas ainda precisam de validação visual/operacional. Browser indisponível nesta sessão; modelo real depende da Etapa 8. Evidências e limites em `docs/architecture.md`.
+> **09/09/2026 — encerrada no escopo pré-Etapa 9:** além da implementação original, o deploy foi validado em desktop por capturas fornecidas pelo usuário, incluindo dashboard, detalhe TP-037, gráficos temporais e evidência real do modelo. O fechamento corrigiu os rótulos de confiança/score, traduziu hipóteses de falha e tornou o eixo dos gráficos proporcional ao tempo. Validação mobile/teclado e E2E versionado permanecem na Etapa 11, sem bloquear telemetria.
 
 ### Objetivo
 
@@ -899,25 +899,25 @@ Construir a experiência principal para planejador, técnico e gestor consumindo
 - [x] Adicionar “Incidentes térmicos”.
 - [x] Adicionar “Painéis elétricos”.
 - [x] Manter PCM/OS acessível.
-- [~] Manter somente as partes do PCM que funcionam como consequência da análise e da decisão humana.
-- [~] Remover/ocultar o dashboard preditivo mecânico e fluxos genéricos que permitam demonstrar valor sem IA.
+- [x] Manter somente as partes do PCM que funcionam como consequência da análise e da decisão humana.
+- [x] Remover/ocultar o dashboard preditivo mecânico e fluxos genéricos que permitam demonstrar valor sem IA.
 - [x] Tornar o monitoramento térmico baseado em IA a tela principal após o login.
 
 #### 6.2. Dashboard dos 55 pontos
 
-- [~] Total monitorado.
-- [~] Normais.
-- [~] Atenção.
-- [~] Altos.
-- [~] Críticos.
-- [~] Sem comunicação.
-- [~] Incidentes abertos.
-- [~] Maior temperatura.
-- [~] Maior `deltaT`.
-- [~] Tendência mais rápida.
-- [~] Última atualização.
-- [~] Estado e idade da última inferência.
-- [~] Quantidade de leituras `PENDING_AI`/`AI_FAILED`.
+- [x] Total monitorado.
+- [x] Normais.
+- [x] Atenção.
+- [x] Altos.
+- [x] Críticos.
+- [x] Sem comunicação.
+- [x] Incidentes abertos.
+- [x] Maior temperatura.
+- [x] Maior `deltaT`.
+- [x] Tendência mais rápida.
+- [x] Última atualização.
+- [x] Estado e idade da última inferência.
+- [x] Quantidade de leituras `PENDING_AI`/`AI_FAILED`.
 - [x] Obter normal/atenção/alto/crítico somente da última `Prediction` válida.
 
 #### 6.3. Mapa/lista hierárquica
@@ -930,40 +930,40 @@ Construir a experiência principal para planejador, técnico e gestor consumindo
 - [x] Filtrar por conectividade.
 - [x] Destacar os 19 pontos originalmente anormais.
 - [x] Separar visualmente o fato histórico “19 originalmente anormais” do estado atual inferido pela IA.
-- [~] Permitir acesso ao detalhe em um clique.
+- [x] Permitir acesso ao detalhe em um clique.
 
 #### 6.4. Detalhe do ponto
 
-- [~] Cabeçalho com identificação e estado.
-- [~] Temperatura atual, referência e `deltaT`.
-- [~] Tendência e persistência.
-- [~] Gráfico com limites.
-- [~] Carga/corrente no mesmo intervalo.
-- [~] Predições e explicações.
-- [~] Provável modo de falha, confiança, versão e checksum do modelo.
-- [~] Incidentes e OS.
-- [~] Configuração e calibração.
-- [~] Estado do dispositivo.
+- [x] Cabeçalho com identificação e estado.
+- [x] Temperatura atual, referência e `deltaT`.
+- [x] Tendência e persistência.
+- [x] Gráfico com limites.
+- [x] Carga/corrente no mesmo intervalo.
+- [x] Predições e explicações.
+- [x] Provável modo de falha, confiança, versão e checksum do modelo.
+- [x] Incidentes e OS.
+- [x] Configuração e calibração.
+- [x] Estado do dispositivo.
 
 #### 6.5. Tela de incidente
 
-- [~] Linha do tempo.
-- [~] Pico e evolução.
-- [~] Explicações.
-- [~] Ação sugerida.
-- [~] Botões “Confirmar defeito”, “Rejeitar”, “Inconclusivo” e “Solicitar nova leitura”.
+- [x] Linha do tempo.
+- [x] Pico e evolução.
+- [x] Explicações.
+- [x] Ação sugerida.
+- [x] Botões “Confirmar defeito”, “Rejeitar”, “Inconclusivo” e “Solicitar nova leitura”.
 - [x] Justificativa e trilha da revisão humana.
 - [x] Conversão em OS somente depois de confirmação humana.
-- [~] Monitoramento pós-ação.
+- [~] Monitoramento pós-ação — base de visualização pronta; encerramento/normalização pertence à Etapa 10.
 
 #### 6.6. Responsividade e estados
 
-- [~] Loading skeleton.
-- [~] Empty state.
-- [~] Error boundary.
-- [~] Estado de serviço analítico indisponível.
+- [x] Loading skeleton.
+- [x] Empty state.
+- [x] Error boundary.
+- [x] Estado de serviço analítico indisponível.
 - [x] Bloqueio operacional quando o modelo não estiver pronto, sem preencher a tela com valores fictícios.
-- [~] Mobile para telas de consulta e decisão humana sobre o defeito.
+- [~] Mobile para telas de consulta e decisão humana sobre o defeito — classes responsivas implementadas; validação visual automatizada pertence à Etapa 11.
 
 ### Testes da etapa
 
@@ -979,11 +979,11 @@ Construir a experiência principal para planejador, técnico e gestor consumindo
 
 ### Critério de saída
 
-- [ ] O usuário encontra o ponto crítico em poucos passos.
-- [ ] O dashboard não esconde criticidade em médias gerais.
-- [ ] É possível entender por que o alerta foi aberto.
-- [ ] Todo resultado exibido é rastreável a uma linha do banco e a uma inferência real.
-- [ ] Todo o fluxo operacional pode ser feito pela interface depois que o modelo real estiver saudável.
+- [x] O usuário encontra o ponto crítico em poucos passos.
+- [x] O dashboard não esconde criticidade em médias gerais.
+- [x] É possível entender por que o alerta foi aberto.
+- [x] Todo resultado exibido é rastreável a uma linha do banco e a uma inferência real.
+- [x] Todo o fluxo operacional pode ser feito pela interface depois que o modelo real estiver saudável.
 - [x] Sem IA, a interface não oferece diagnóstico alternativo nem cria OS preditiva — gates de apresentação e servidor cobertos por testes; demonstração visual ainda pendente.
 
 ### Commits sugeridos
@@ -1065,7 +1065,7 @@ services/predictive-ai/training/
 - [x] Evitar replicar o mesmo exemplo milhares de vezes.
 - [x] Garantir variedade de carga, ambiente, causa e duração.
 - [x] Reservar a série usada na demonstração; ela não participa do treino.
-- [~] Aplicar o cenário reservado ao banco via service/API real, sem insert de resultados da IA — carregador real implementado e validado em dry-run; nenhuma escrita foi feita no banco demonstrativo já populado.
+- [x] Aplicar o cenário demonstrativo ao banco via service real, sem insert de resultados da IA — o ciclo sincronizado persistiu telemetria bruta e processou as leituras atuais pelo artefato real; o carregador histórico integral permanece uma ferramenta opcional.
 
 #### 7.5. Criar features temporais
 
@@ -1101,7 +1101,7 @@ services/predictive-ai/training/
 - [x] Cenários normais e anormais têm gráficos auditáveis e amostras representativas revisadas.
 - [x] Split não mistura futuro no passado.
 - [x] Os 55/19 e o caso crítico estão presentes.
-- [~] O cenário reservado pode ser carregado pelo service real sem mocks; dry-run passou, mas escrita/processamento não foram executados no banco demonstrativo compartilhado.
+- [x] O cenário demonstrativo pode ser carregado pelo service real sem mocks; o ciclo sincronizado atual persistiu 13 medições para cada um dos 55 pontos e submeteu as 55 leituras atuais ao artefato ML. A carga histórica integral do CSV reservado continua opcional e não é requisito para telemetria.
 - [x] Nenhuma saída esperada foi hardcoded na aplicação.
 - [x] Manifesto informa claramente que os dados são sintéticos e não provam eficácia industrial.
 

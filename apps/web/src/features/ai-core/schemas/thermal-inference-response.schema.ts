@@ -29,6 +29,7 @@ export const thermalInferenceResponseSchema = z
     modelStage: z.enum(ALLOWED_THERMAL_MODEL_STAGES, {
       errorMap: () => ({ message: "Estágio de modelo não permitido para operação (DEMO/RULE_ONLY/desconhecido são sempre rejeitados)." }),
     }),
+    supervisedFailureProbability: z.number().min(0).max(1, "supervisedFailureProbability deve estar entre 0 e 1."),
     modelScore: z.number().min(0).max(100, "modelScore deve estar entre 0 e 100."),
     riskScore: z.number().min(0).max(100, "riskScore deve estar entre 0 e 100."),
     riskLevel: z.enum(["LOW", "MODERATE", "HIGH", "CRITICAL"]),

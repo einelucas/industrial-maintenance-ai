@@ -7,6 +7,7 @@ const validResponse = {
   modelVersion: "thermal-synth-2026.09.01",
   modelChecksum: "sha256:" + "a".repeat(64),
   modelStage: "SYNTHETIC_EXPERIMENTAL",
+  supervisedFailureProbability: 0.73,
   modelScore: 92.8,
   riskScore: 96.4,
   riskLevel: "CRITICAL",
@@ -39,6 +40,11 @@ describe("thermalInferenceResponseSchema — estágios de modelo", () => {
 });
 
 describe("thermalInferenceResponseSchema — faixas numéricas", () => {
+  it("rejeita probabilidade supervisionada fora de [0, 1]", () => {
+    expect(thermalInferenceResponseSchema.safeParse({ ...validResponse, supervisedFailureProbability: 1.1 }).success).toBe(false);
+    expect(thermalInferenceResponseSchema.safeParse({ ...validResponse, supervisedFailureProbability: -0.1 }).success).toBe(false);
+  });
+
   it("rejeita modelScore fora de [0, 100]", () => {
     expect(thermalInferenceResponseSchema.safeParse({ ...validResponse, modelScore: 101 }).success).toBe(false);
     expect(thermalInferenceResponseSchema.safeParse({ ...validResponse, modelScore: -1 }).success).toBe(false);

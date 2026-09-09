@@ -244,6 +244,13 @@ O pós-ação permanece reservado, salvo se `--include-post-action` for informad
 
 ## Modelo termográfico e FastAPI (Etapa 8)
 
+O contrato térmico separa quatro conceitos que não devem ser confundidos:
+`supervisedFailureProbability` é a probabilidade calibrada do classificador;
+`confidence` é a confiança da classe supervisionada escolhida; `modelScore` é
+o score combinado dos modelos; e `riskScore` é o score operacional final, que
+pode ser elevado por um piso de engenharia somente após inferência ML válida.
+Na interface, o modo de falha é apresentado como hipótese para revisão humana.
+
 O artefato não é baixado de serviço externo nem possui fallback. Em uma instalação limpa, gere e valide o bundle com:
 
 ```bash

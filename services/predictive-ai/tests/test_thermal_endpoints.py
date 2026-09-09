@@ -79,6 +79,7 @@ def test_normal_prediction_is_valid_explained_and_deterministic():
     assert first.status_code == second.status_code == 200
     assert first.json() == second.json()
     body = first.json()
+    assert 0 <= body["supervisedFailureProbability"] <= 1
     assert 0 <= body["modelScore"] <= 100
     assert 0 <= body["riskScore"] <= 100
     assert body["explanations"]
@@ -92,6 +93,7 @@ def test_critical_engineering_floor_is_applied_only_after_valid_ml_score():
     body = response.json()
     assert body["riskLevel"] == "CRITICAL"
     assert body["riskScore"] >= 85
+    assert 0 <= body["supervisedFailureProbability"] <= 1
     assert 0 <= body["modelScore"] <= 100
     assert any("após inferência ML válida" in explanation for explanation in body["explanations"])
 
