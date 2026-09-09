@@ -1,0 +1,2 @@
+-r requirements.vercel-runtime.txt
+pyarrow==18.1.0

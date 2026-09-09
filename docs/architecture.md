@@ -551,9 +551,27 @@ O pré-voo real retornou `READY` com 55 pontos, 19 marcadores reservados, dois u
 
 ### Imagem reproduzível do FastAPI
 
-`thermal_model.joblib` permanece ignorado pelo Git. Para que um checkout limpo não produza uma imagem sem modelo, o Dockerfile agora exige a raiz do monorepo como contexto, copia somente o serviço e os datasets necessários e executa treino + validação durante o build. Qualquer falha impede a criação da imagem. O `.dockerignore` exclui `.env`, ambientes virtuais, dependências Node, caches, dados brutos e artefatos locais desnecessários. `docker-compose.yml` usa o mesmo contexto e caminho de runtime.
+`thermal_model.joblib` permanece ignorado pelo Git. Para que um checkout limpo não produza uma imagem sem modelo, os Dockerfiles exigem a raiz do monorepo como contexto, copiam somente o serviço e os datasets necessários e executam treino + validação durante o build. Qualquer falha impede a criação da imagem. O `.dockerignore` exclui `.env`, ambientes virtuais, dependências Node, caches, dados brutos e artefatos locais desnecessários. `docker-compose.yml` usa o mesmo contexto e caminho de runtime.
+
+Para produção, `Dockerfile.vercel` usa multi-stage build: o estágio de treino possui `pyarrow` e gera o bundle verificável; a imagem final instala somente as dependências de inferência e copia `app/` e `models/`. O processo escuta a variável `PORT` da plataforma, com porta 80 como padrão.
 
 O build real da imagem não foi executado nesta sessão porque o executável Docker não está instalado. A validação definitiva fica para o serviço de deploy; o comando canônico é `docker build -f services/predictive-ai/Dockerfile -t predictive-ai .`.
+
+### Vercel Services
+
+O `vercel.json` canônico fica na raiz do repositório e define dois serviços. O
+Next.js usa `apps/web` como raiz; o FastAPI usa o contexto completo somente para
+o build do `Dockerfile.vercel`, pois os datasets pertencem à raiz do monorepo.
+Rewrites específicos encaminham `/health` e `/api/v1/*` ao FastAPI antes do
+catch-all do frontend.
+
+O serviço `web` declara dois bindings para `predictive_ai`, injetados como
+`AI_SERVICE_URL` e `PREDICTIVE_AI_URL`. Eles são URLs absolutas internas e
+específicas de cada deployment. A comunicação continua autenticada por
+`AI_SERVICE_API_KEY`; o binding fornece alcance e descoberta, não substitui a
+autorização da aplicação. No painel Vercel essas duas URLs devem permanecer
+ausentes, pois uma variável criada manualmente teria precedência sobre o valor
+gerado pela plataforma.
 
 ### Uma execução automática diária
 

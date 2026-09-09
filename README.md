@@ -154,9 +154,43 @@ docker compose --profile local-db up postgres
 
 O contexto é a raiz porque o build usa os datasets processados para treinar e validar `thermal_model.joblib`, que não é versionado. O build falha se o artefato/checksum não for válido, e o Compose usa o bundle interno da imagem sem sobrescrevê-lo com um volume local. O Next.js roda fora do Docker durante o desenvolvimento.
 
-## 9. Automação diária na Vercel
+## 9. Deploy conjunto na Vercel
 
-`apps/web/vercel.json` registra somente `GET /api/cron/daily-maintenance`, diariamente às 06:00 UTC. A chamada autenticada por `CRON_SECRET` executa, uma vez, o scheduler de OS preventivas e um lote limitado do processamento térmico. Os antigos endpoints específicos continuam disponíveis para operação manual/compatibilidade, mas não são agendados pela Vercel.
+O `vercel.json` da raiz usa **Vercel Services** para publicar o Next.js e o
+FastAPI no mesmo projeto e domínio:
+
+- `web`: Next.js em `/`;
+- `predictive_ai`: container gerado por `Dockerfile.vercel`;
+- `/api/v1/*` e `/health`: tráfego público encaminhado ao FastAPI;
+- demais rotas: encaminhadas ao Next.js;
+- binding interno: injeta `AI_SERVICE_URL` e `PREDICTIVE_AI_URL` no serviço
+  `web`, sempre apontando para o backend da mesma Preview/Production.
+
+Na importação do GitHub, selecione **Services** e deixe o **Root Directory na
+raiz do repositório** (vazio ou `.`), não em `apps/web`. Não cadastre
+`AI_SERVICE_URL` nem `PREDICTIVE_AI_URL` no painel: valores definidos pelo
+usuário sobrescrevem o binding automático.
+
+Cadastre como secretos/variáveis do projeto: `DATABASE_URL`, `DIRECT_URL`,
+`AUTH_SECRET`, `NEXTAUTH_URL`, `AI_SERVICE_API_KEY` e `CRON_SECRET`. A mesma
+`AI_SERVICE_API_KEY` é recebida pelos dois serviços. As variáveis opcionais
+`AI_REQUEST_TIMEOUT_MS`, `AI_MAX_RETRIES`, `EXPECTED_MODEL_STAGE`,
+`EXPECTED_MODEL_CHECKSUM` e `CORS_ORIGINS` podem ser usadas para pinagem e
+ajuste operacional; `APP_ENV=production` já é definido na imagem.
+
+O container tem dois estágios: o primeiro treina e valida o bundle a partir
+dos datasets versionados; o segundo contém somente o runtime e o modelo
+aprovado. O deploy falha se artefato, metadados ou checksum forem inválidos.
+
+O mesmo `vercel.json` registra somente `GET /api/cron/daily-maintenance`,
+diariamente às 06:00 UTC. A chamada autenticada por `CRON_SECRET` executa uma
+vez o scheduler de OS preventivas e um lote limitado do processamento térmico.
+Os endpoints específicos antigos continuam disponíveis para operação manual,
+mas não são agendados pela Vercel.
+
+Após o deploy, valide `GET /health`, `GET /api/v1/thermal/health`, login e a
+execução manual autenticada de `/api/cron/daily-maintenance` antes de depender
+do primeiro agendamento.
 
 ## Testes
 

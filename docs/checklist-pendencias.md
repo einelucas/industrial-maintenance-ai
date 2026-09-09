@@ -10,11 +10,11 @@
 - [x] ~~Rodar `npx prisma generate` + `npx prisma migrate dev`~~ — feito repetidas vezes com sucesso (internet confirmada disponível no ambiente). **Atenção:** `prisma migrate dev` falha neste projeto com um erro do Neon (`P1001` / "terminating connection due to administrator command") ao criar o shadow database — é uma limitação conhecida do Neon com múltiplos databases no mesmo branch, não falta de internet. Workaround usado em todas as migrations desta fase: `prisma db push` (aplica o schema direto) + arquivo de migration escrito manualmente + `prisma migrate resolve --applied` (mantém o histórico de migrations consistente). Documentar esse processo formalmente é o item que falta (ver seção DevOps).
 - [ ] Trocar `AUTH_SECRET`, `AI_SERVICE_API_KEY` **e `CRON_SECRET`** (novo — usado pelo scheduler automático de OS preventivas) de desenvolvimento por valores fortes e únicos em produção
 - [ ] Configurar `NEXTAUTH_URL` com o domínio real de produção
-- [ ] Revisar CORS do FastAPI (`CORS_ORIGINS` em `services/predictive-ai/.env`) para aceitar apenas o domínio de produção do Next.js
-- [ ] Definir estratégia de deploy do FastAPI (hoje só tem Dockerfile — decidir: Railway, Fly.io, Cloud Run, VM própria, etc.)
-- [x] Garantir que o build do FastAPI recupere o modelo ignorado pelo Git — Dockerfile usa a raiz, treina e valida o bundle/checksum; build real aguarda ambiente com Docker/serviço de deploy
-- [ ] Definir estratégia de deploy do Next.js — **parcialmente decidido**: `vercel.json` agora possui um único cron diário agregando scheduler preventivo e processamento térmico, mas nenhum deploy foi realizado
-- [ ] Habilitar HTTPS/TLS entre Next.js e FastAPI se não estiverem na mesma rede privada
+- [ ] Revisar CORS do FastAPI (`CORS_ORIGINS`) caso o endpoint público seja consumido diretamente pelo navegador; a aplicação usa binding interno server-to-server
+- [x] Definir estratégia de deploy do FastAPI — Vercel Services, em container descrito por `Dockerfile.vercel`
+- [x] Garantir que o build do FastAPI recupere o modelo ignorado pelo Git — a imagem Vercel usa a raiz, treina e valida o bundle/checksum em estágio isolado
+- [x] Definir estratégia de deploy do Next.js — serviço `web` no mesmo projeto Vercel, com um único cron diário
+- [x] Conectar Next.js e FastAPI sem hostname público fixo — binding Vercel deployment-aware e autenticação por `AI_SERVICE_API_KEY`
 - [x] Projeto versionado em Git, branch `main`, com remoto `origin` configurado
 - [x] Pré-voo somente leitura `pnpm demo:verify` valida IA, banco, TP-039 e estado fresco do roteiro antes da apresentação
 - [x] Consolidar automações Vercel em uma única execução diária autenticada
