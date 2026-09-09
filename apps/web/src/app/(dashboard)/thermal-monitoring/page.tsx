@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/utils/format";
+import { ThermalSyncButton } from "@/features/ai-core/components/thermal-sync-button";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function ThermalMonitoringPage({ searchParams }: { searchParams: MonitoringFilters }) {
   const user = await requirePermission("thermal-point:view");
@@ -34,7 +36,9 @@ export default async function ThermalMonitoringPage({ searchParams }: { searchPa
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-semibold">Monitoramento térmico</h1>
       <p className="mt-1 text-sm text-muted-foreground">Da medição à evidência da IA e à decisão humana.</p></div>
-      <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/thermal-incidents">Ver incidentes</Link></Button>
+      <div className="flex flex-wrap items-start gap-2">
+        {can(user.role, "thermal-reading:simulate") && <ThermalSyncButton />}
+        <Button asChild variant="outline"><Link href="/thermal-incidents">Ver incidentes</Link></Button>
         {can(user.role, "thermal-reading:create") && <Button asChild><Link href="/thermal-readings/new">Registrar leitura</Link></Button>}
       </div></div>
     {latestReadings.some((r) => r.source === "SIMULATOR") && <p className="rounded-md border p-3 text-sm"><strong>Dados sintéticos:</strong> as leituras identificadas como SIMULATOR são simulações persistidas no banco.</p>}

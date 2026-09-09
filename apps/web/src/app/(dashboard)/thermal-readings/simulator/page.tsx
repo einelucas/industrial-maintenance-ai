@@ -4,6 +4,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { Card, CardContent } from "@/components/ui/card";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 
+export const maxDuration = 60;
+
 export default async function ThermalReadingSimulatorPage() {
   await requirePermission("thermal-reading:simulate");
   const points = await thermalPointService.listActive();

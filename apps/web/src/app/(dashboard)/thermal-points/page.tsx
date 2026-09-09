@@ -101,7 +101,7 @@ export default async function ThermalPointsPage({ searchParams }: { searchParams
                 <TableHead className="hidden sm:table-cell">Componente</TableHead>
                 <TableHead>Modo</TableHead>
                 <TableHead>Dispositivos</TableHead>
-                <TableHead>Análise da IA</TableHead>
+                <TableHead>Histórico da IA</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -125,7 +125,7 @@ export default async function ThermalPointsPage({ searchParams }: { searchParams
                   <TableCell>{point.monitoringMode}</TableCell>
                   <TableCell>{point.devices.length}</TableCell>
                   <TableCell>
-                    {point.predictions.length === 0 ? <AwaitingAiAnalysisBadge /> : <Badge variant="muted">Analisado</Badge>}
+                    {point.predictions.length === 0 ? <AwaitingAiAnalysisBadge /> : <Badge variant="muted">Possui histórico</Badge>}
                   </TableCell>
                   <TableCell>
                     <Badge variant={point.active ? "neutral" : "muted"}>{point.active ? "Ativo" : "Inativo"}</Badge>

@@ -46,9 +46,12 @@ const ANOMALY_PROFILES: Record<ThermalCause, AnomalyProfile> = {
   LOOSE_CONNECTION: { finalDeltaTRange: [30, 36], shape: "accelerating" },
   CONTACT_RESISTANCE: { finalDeltaTRange: [16, 22], shape: "accelerating" },
   OVERLOAD: { finalDeltaTRange: [14, 20], shape: "oscillating" },
-  PHASE_IMBALANCE: { finalDeltaTRange: [11, 16], shape: "plateau" },
-  DEGRADED_CONTACT: { finalDeltaTRange: [13, 18], shape: "linear" },
-  INSUFFICIENT_VENTILATION: { finalDeltaTRange: [9, 14], shape: "plateau" },
+  // Os cenários reservados de defeito precisam encerrar acima do limiar de
+  // atenção (10 °C) mesmo em pontos cuja referência saudável é mais alta.
+  // Isso altera apenas a telemetria sintética, nunca a resposta da IA.
+  PHASE_IMBALANCE: { finalDeltaTRange: [16, 21], shape: "plateau" },
+  DEGRADED_CONTACT: { finalDeltaTRange: [15, 20], shape: "linear" },
+  INSUFFICIENT_VENTILATION: { finalDeltaTRange: [15, 20], shape: "plateau" },
   THERMAL_RELAY_DEGRADATION: { finalDeltaTRange: [15, 20], shape: "oscillating" },
   PROCESS_CONDITION: { finalDeltaTRange: [8, 12], shape: "linear" },
   SENSOR_ERROR: { finalDeltaTRange: [0, 0], shape: "linear" },

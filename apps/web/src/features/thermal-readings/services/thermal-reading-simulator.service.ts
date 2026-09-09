@@ -11,6 +11,9 @@ import {
 } from "@/features/thermal-readings/services/thermal-reading.service";
 import { thermalPointRepository } from "@/features/thermal-points/repositories/thermal-point.repository";
 import { NotFoundError, ValidationError } from "@/lib/errors";
+import { prisma } from "@/lib/db/client";
+import { buildPlantDemoCycle } from "@/lib/thermal-simulation/plant-demo-cycle";
+import { thermalBackfillService, type BackfillReport } from "@/features/ai-core/services/thermal-backfill.service";
 
 export { SIMULATOR_SCENARIOS };
 export type { SimulatorScenario };
@@ -40,7 +43,62 @@ export interface RunSimulatorResult {
   rejected: BatchIngestRejection[];
 }
 
+export interface RunPlantDemoResult {
+  pointCount: number;
+  expectedAnomalousPointCount: number;
+  officialCriticalPointCode: string;
+  samplesPerPoint: number;
+  acceptedCount: number;
+  detectedRiskPointCount: number;
+  analyzedAt: string;
+  analysis: BackfillReport;
+}
+
 export const thermalReadingSimulatorService = {
+  async runPlantDemo(now: Date): Promise<RunPlantDemoResult> {
+    // Arredondar ao minuto torna um duplo clique idempotente/detectável.
+    const endAt = new Date(Math.floor(now.getTime() / 60_000) * 60_000);
+    const cycle = buildPlantDemoCycle(endAt);
+    const pointCodes = [...new Set(cycle.rows.map((row) => row.thermalPointCode))];
+    const existingCurrent = await prisma.thermalReading.count({
+      where: { measuredAt: endAt, source: "SIMULATOR", thermalPoint: { code: { in: pointCodes } } },
+    });
+    if (existingCurrent > 0) {
+      throw new ValidationError("O cenário completo já foi executado neste minuto. Aguarde um minuto antes de repetir.");
+    }
+
+    const result = await thermalReadingService.ingestBatchByCode(cycle.rows, "SIMULATOR");
+    if (result.rejectedCount > 0 || result.acceptedCount !== cycle.rows.length) {
+      throw new ValidationError(`A carga do cenário ficou incompleta: ${result.acceptedCount} aceitas e ${result.rejectedCount} rejeitadas.`);
+    }
+
+    const currentReadings = await prisma.thermalReading.findMany({
+      where: { measuredAt: endAt, source: "SIMULATOR", thermalPoint: { code: { in: pointCodes } } },
+      select: { id: true },
+    });
+    if (currentReadings.length !== cycle.pointCount) {
+      throw new ValidationError(`Esperadas ${cycle.pointCount} leituras atuais, mas foram encontradas ${currentReadings.length}.`);
+    }
+
+    const analysis = await thermalBackfillService.runSpecificReadings(currentReadings.map((reading) => reading.id));
+    const detectedRiskPointCount = await prisma.prediction.count({
+      where: {
+        thermalReadingId: { in: currentReadings.map((reading) => reading.id) },
+        riskLevel: { in: ["MODERATE", "HIGH", "CRITICAL"] },
+      },
+    });
+    return {
+      pointCount: cycle.pointCount,
+      expectedAnomalousPointCount: cycle.expectedAnomalousPointCount,
+      officialCriticalPointCode: cycle.officialCriticalPointCode,
+      samplesPerPoint: cycle.rows.length / cycle.pointCount,
+      acceptedCount: result.acceptedCount,
+      detectedRiskPointCount,
+      analyzedAt: endAt.toISOString(),
+      analysis,
+    };
+  },
+
   async run(input: RunSimulatorInput, now: Date): Promise<RunSimulatorResult> {
     const point = await thermalPointRepository.findById(input.thermalPointId);
     if (!point) throw new NotFoundError("Ponto termográfico", input.thermalPointId);

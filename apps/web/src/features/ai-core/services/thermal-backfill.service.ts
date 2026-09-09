@@ -134,4 +134,77 @@ export const thermalBackfillService = {
 
     return { eligibleCount, enqueuedCount, processedCount, succeededCount, transientFailureCount, failedCount, dryRun: false };
   },
+
+  /**
+   * Analisa somente a leitura mais recente de cada ponto ativo. Este caminho
+   * atende a sincronizacao extraordinaria da interface sem disputar a ordem
+   * da fila historica, que continua sendo drenada pelo cron diario.
+   */
+  async runCurrentReadings(): Promise<BackfillReport> {
+    const points = await prisma.thermalPoint.findMany({
+      where: { active: true },
+      select: {
+        readings: {
+          orderBy: [{ measuredAt: "desc" }, { id: "desc" }],
+          take: 1,
+          select: { id: true },
+        },
+      },
+    });
+    const latestReadingIds = points.flatMap((point) => point.readings.map((reading) => reading.id));
+    return this.runSpecificReadings(latestReadingIds);
+  },
+
+  /** Processa um conjunto explícito de leituras, usado pelo ciclo demonstrativo da planta. */
+  async runSpecificReadings(readingIds: string[]): Promise<BackfillReport> {
+    const uniqueIds = [...new Set(readingIds)];
+    if (uniqueIds.length > 100) throw new Error("O processamento direcionado aceita no máximo 100 leituras.");
+
+    const readings = await prisma.thermalReading.findMany({
+      where: { id: { in: uniqueIds }, analysisStatus: "PENDING_AI" },
+      orderBy: [{ measuredAt: "desc" }, { id: "desc" }],
+      select: { id: true, thermalPointId: true },
+    });
+    const eligibleCount = readings.length;
+    const readiness = await thermalAiGateway.checkReadiness();
+    if (!readiness.ready) {
+      return {
+        eligibleCount, enqueuedCount: 0, processedCount: 0, succeededCount: 0,
+        transientFailureCount: 0, failedCount: 0, dryRun: false,
+        stoppedReason: `Núcleo de IA térmica indisponível — nada foi processado: ${readiness.reason ?? "motivo não informado"}.`,
+      };
+    }
+
+    const requestIds: string[] = [];
+    for (const reading of readings) {
+      const inferenceRequestId = buildInferenceRequestId(reading.id, THERMAL_FEATURE_VERSION);
+      await inferenceRequestRepository.upsertPending({
+        inferenceRequestId,
+        thermalReadingId: reading.id,
+        thermalPointId: reading.thermalPointId,
+        featureVersion: THERMAL_FEATURE_VERSION,
+      });
+      requestIds.push(inferenceRequestId);
+    }
+
+    let succeededCount = 0;
+    let transientFailureCount = 0;
+    let failedCount = 0;
+    for (const id of requestIds) {
+      const result = await thermalOrchestratorService.processInferenceRequest(id);
+      if (result.outcome === "SUCCEEDED") succeededCount++;
+      else if (result.outcome === "TRANSIENT_FAILURE") transientFailureCount++;
+      else if (result.outcome === "FAILED") failedCount++;
+    }
+
+    return {
+      eligibleCount,
+      enqueuedCount: requestIds.length,
+      processedCount: requestIds.length,
+      succeededCount,
+      transientFailureCount,
+      failedCount,
+      dryRun: false,
+    };
+  },
 };

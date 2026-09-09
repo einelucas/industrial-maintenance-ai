@@ -591,7 +591,23 @@ requisições já enfileiradas quanto na criação de novas solicitações. Assi
 execução diária atualiza primeiro o risco atual dos pontos e só depois consome
 o histórico antigo, mantendo idempotência e processamento sequencial.
 
+Como exceção sob demanda, a tela de monitoramento expõe uma ação autenticada
+para sincronizar a leitura mais recente de cada ponto ativo. Ela usa o mesmo
+gateway, orquestrador, artefato e persistência do cron, mas não agenda outra
+execução nem deixa trabalho rodando após o fim da requisição. Leituras atuais
+já analisadas são ignoradas e o acervo histórico permanece no cron diário.
+
 O cenário fresco é deliberadamente de uso único: confirmação e OS são auditoria real e não são apagadas para repetir apresentações. Ensaios completos devem usar branch/banco demonstrativo separado.
+
+O simulador também oferece um ciclo completo e sincronizado da planta. Ele
+rebaseia uma janela determinística de 13 medições para cada um dos 55 pontos,
+mantém 19 perfis com degradação térmica e persiste somente telemetria bruta pelo
+mesmo serviço das entradas manual/CSV. Em seguida, enfileira exatamente as 55
+leituras atuais e as submete ao artefato ML. O gabarito sintético é apresentado
+apenas para comparação posterior; flags e causas não entram no contrato de
+inferência. A avaliação offline do artefato sobre esse ciclo resultou em 19
+verdadeiros positivos, 36 verdadeiros negativos e nenhum falso positivo ou
+falso negativo no cenário reservado, sem constituir validação industrial.
 
 ## Limitação histórica do ambiente de construção original
 

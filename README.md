@@ -141,6 +141,19 @@ Para validar um build enquanto o servidor de ensaio estiver aberto, use `NEXT_DI
 
 Roteiro recomendado: login como ADMIN/PLANNER → `/thermal-monitoring` → TP-039 → incidente crítico → mostrar inferência/versão/checksum → confirmar defeito → criar OS preditiva. A revisão e a OS são registros auditáveis: o cenário fresco é consumido uma vez e não é apagado automaticamente. Para ensaios repetidos, use uma branch/banco Neon demonstrativo separado e preserve o banco da apresentação.
 
+Para preparar uma demonstração completa sem consumir primeiro todo o histórico,
+acesse `/thermal-readings/simulator` e use **Simular planta e analisar agora**.
+O fluxo grava 13 medições sintéticas para cada um dos 55 pontos, com degradação
+térmica em 19, e envia as 55 leituras atuais ao artefato ML. Rótulos e causas
+do gabarito não fazem parte do payload; o resultado mostra separadamente o
+gabarito reservado e quantos riscos foram efetivamente detectados.
+
+Fora do horário do cron, usuários autorizados podem usar **Sincronizar análises
+agora** em `/thermal-monitoring`. A ação seleciona a leitura mais recente de
+cada ponto ativo e analisa somente as que ainda estão pendentes, sem criar um
+segundo agendamento. Ao encerrar a requisição não permanece nenhum worker em
+background na Vercel; o histórico continua sob responsabilidade do cron diário.
+
 ## 8. Docker (serviço de IA)
 
 ```bash

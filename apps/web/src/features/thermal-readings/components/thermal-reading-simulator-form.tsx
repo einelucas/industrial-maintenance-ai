@@ -4,6 +4,8 @@ import { useFormState } from "react-dom";
 import type { ThermalPoint } from "@prisma/client";
 import {
   runThermalReadingSimulatorAction,
+  runPlantDemoAction,
+  type RunPlantDemoFormState,
   type RunThermalReadingSimulatorFormState,
 } from "@/features/thermal-readings/actions/run-thermal-reading-simulator.action";
 import { SIMULATOR_SCENARIOS } from "@/features/thermal-readings/services/thermal-reading-simulator.service";
@@ -14,6 +16,7 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const initialState: RunThermalReadingSimulatorFormState = {};
+const initialPlantState: RunPlantDemoFormState = {};
 
 const SCENARIO_LABEL: Record<(typeof SIMULATOR_SCENARIOS)[number], string> = {
   NORMAL_LOW_LOAD: "Normal sob baixa carga",
@@ -29,9 +32,32 @@ const SCENARIO_LABEL: Record<(typeof SIMULATOR_SCENARIOS)[number], string> = {
 
 export function ThermalReadingSimulatorForm({ points }: { points: ThermalPoint[] }) {
   const [state, formAction] = useFormState(runThermalReadingSimulatorAction, initialState);
+  const [plantState, plantFormAction] = useFormState(runPlantDemoAction, initialPlantState);
 
   return (
     <div className="space-y-6">
+      <div className="space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-4">
+        <div>
+          <h2 className="font-semibold">Cenário completo GPMS 2026</h2>
+          <p className="text-sm text-muted-foreground">
+            Gera uma janela sincronizada dos 55 pontos, com sinais térmicos sintéticos de defeito em 19 deles, e envia as 55 leituras atuais ao modelo real. Nenhum risco ou resultado é pré-gravado.
+          </p>
+        </div>
+        <form action={plantFormAction}>
+          <SubmitButton pendingText="Simulando e analisando...">Simular planta e analisar agora</SubmitButton>
+        </form>
+        {plantState.error && <p className="text-sm text-status-critical">{plantState.error}</p>}
+        {plantState.result && (
+          <div className="space-y-1 text-sm">
+            <p><strong>{plantState.result.acceptedCount}</strong> medições persistidas ({plantState.result.samplesPerPoint} por ponto).</p>
+            <p>Leituras atuais analisadas: <strong>{plantState.result.analysis.succeededCount}/{plantState.result.pointCount}</strong>.</p>
+            <p>Pontos classificados com risco atual: <strong>{plantState.result.detectedRiskPointCount}/{plantState.result.pointCount}</strong>.</p>
+            <p>Gabarito reservado da simulação: <strong>{plantState.result.expectedAnomalousPointCount}</strong> pontos com degradação. Caso crítico: <strong>{plantState.result.officialCriticalPointCode}</strong>.</p>
+            {plantState.result.analysis.stoppedReason && <p className="text-status-critical">{plantState.result.analysis.stoppedReason}</p>}
+          </div>
+        )}
+      </div>
+
       <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="thermalPointId">Ponto termográfico *</Label>

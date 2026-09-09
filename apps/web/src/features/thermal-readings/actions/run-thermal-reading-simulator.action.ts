@@ -6,6 +6,7 @@ import {
   thermalReadingSimulatorService,
   SIMULATOR_SCENARIOS,
   type RunSimulatorResult,
+  type RunPlantDemoResult,
 } from "@/features/thermal-readings/services/thermal-reading-simulator.service";
 import { requirePermission } from "@/lib/auth/session";
 import { toActionErrorMessage } from "@/lib/errors";
@@ -15,6 +16,33 @@ export type RunThermalReadingSimulatorFormState = {
   error?: string;
   result?: RunSimulatorResult;
 };
+
+export type RunPlantDemoFormState = { error?: string; result?: RunPlantDemoResult };
+
+export async function runPlantDemoAction(
+  _prevState: RunPlantDemoFormState,
+  _formData: FormData
+): Promise<RunPlantDemoFormState> {
+  try {
+    const user = await requirePermission("thermal-reading:simulate");
+    const result = await thermalReadingSimulatorService.runPlantDemo(new Date());
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        entity: "ThermalReading",
+        entityId: "gpms-plant-demo-cycle",
+        action: "SIMULATE_AND_ANALYZE_PLANT",
+        metadata: JSON.parse(JSON.stringify(result)),
+      },
+    });
+    revalidatePath("/thermal-readings");
+    revalidatePath("/thermal-monitoring", "layout");
+    revalidatePath("/thermal-incidents", "layout");
+    return { result };
+  } catch (error) {
+    return { error: toActionErrorMessage(error) };
+  }
+}
 
 const runSimulatorFormSchema = z.object({
   thermalPointId: z.string().uuid("Selecione um ponto termográfico válido."),
