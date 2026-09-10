@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONNECTIVITY_LABELS, RISK_LABELS, type MonitoringFilters } from "@/features/thermal-monitoring/services/thermal-presentation";
+import { COMPANY_PRIORITY_LABELS } from "@/features/thermal-priority/constants";
 
 type Option = { id: string; name: string };
 export function FilterSelect({ name, label, value, options }: { name: string; label: string; value?: string; options: Option[] }) {
@@ -19,6 +20,7 @@ export function MonitoringFiltersForm({ filters, options }: { filters: Monitorin
     <FilterSelect name="panelId" label="Painel" value={filters.panelId} options={options.panels} />
     <FilterSelect name="componentId" label="Componente" value={filters.componentId} options={options.components} />
     <FilterSelect name="risk" label="Risco atual da IA" value={filters.risk} options={[...Object.entries(RISK_LABELS).map(([id, name]) => ({ id, name })), { id: "PENDING_AI", name: "Sem análise atual" }]} />
+    <FilterSelect name="companyPriority" label="Prioridade histórica" value={filters.companyPriority} options={Object.entries(COMPANY_PRIORITY_LABELS).map(([id, name]) => ({ id, name }))} />
     <FilterSelect name="connectivity" label="Conectividade" value={filters.connectivity} options={Object.entries(CONNECTIVITY_LABELS).map(([id, name]) => ({ id, name }))} />
     <div className="flex items-end gap-2"><Button type="submit">Aplicar filtros</Button><Button variant="outline" asChild><Link href="/thermal-monitoring">Limpar</Link></Button></div>
   </form>;

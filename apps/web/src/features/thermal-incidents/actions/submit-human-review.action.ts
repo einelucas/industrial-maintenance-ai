@@ -32,7 +32,12 @@ export async function submitHumanReviewAction(
         entity: "ThermalIncident",
         entityId: incident.id,
         action: "HUMAN_REVIEW",
-        metadata: { decision: incident.humanReviewDecision, nextStatus: incident.status },
+        metadata: {
+          decision: incident.humanReviewDecision,
+          nextStatus: incident.status,
+          finalCompanyPriority: incident.finalCompanyPriority,
+          priorityPolicyVersion: incident.priorityPolicyVersion,
+        },
       },
     });
 

@@ -4,6 +4,7 @@ import { humanReviewDecisionSchema } from "@/features/thermal-incidents/schemas/
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { predictionEvidenceInclude, predictionOrder, traceablePredictionWhere } from "@/features/thermal-monitoring/repositories/thermal-monitoring.repository";
 import { isTraceablePrediction } from "@/features/thermal-monitoring/services/thermal-presentation";
+import { thermalPriorityPolicyService } from "@/features/thermal-priority/services/thermal-priority-policy.service";
 
 // Revisão humana do defeito indicado pela IA (GPMS 2026 / Etapa 5). Histórico
 // imutável: cada chamada cria uma nova linha em `HumanReview` (nunca
@@ -55,6 +56,31 @@ export const humanReviewService = {
       throw new ValidationError("Uma nova inferência foi registrada. Atualize a página e revise a evidência mais recente.");
     }
 
+    const persistedRecommendedPriority = latestPrediction.recommendedCompanyPriority ?? incident.recommendedCompanyPriority;
+    const persistedPolicyVersion = latestPrediction.priorityPolicyVersion ?? incident.priorityPolicyVersion;
+    const priorityContext = parsed.data.decision === "CONFIRMED"
+      ? await thermalPriorityPolicyService.resolveForReview({
+          riskLevel: latestPrediction.riskLevel,
+          recommendedCompanyPriority: persistedRecommendedPriority,
+          priorityPolicyVersion: persistedPolicyVersion,
+        })
+      : {
+          priority: persistedRecommendedPriority,
+          policyVersion: persistedPolicyVersion,
+          policyStatus: null,
+        };
+    const recommendedPriority = priorityContext.priority;
+    if (
+      parsed.data.decision === "CONFIRMED" &&
+      recommendedPriority &&
+      parsed.data.finalCompanyPriority !== recommendedPriority &&
+      !parsed.data.justification
+    ) {
+      throw new ValidationError("Justifique a alteração da prioridade recomendada pela política empresarial.", {
+        justification: ["Obrigatória ao alterar a prioridade recomendada."],
+      });
+    }
+
     const nextStatus = NEXT_STATUS_BY_DECISION[parsed.data.decision];
 
     return prisma.$transaction(async (tx) => {
@@ -75,6 +101,9 @@ export const humanReviewService = {
           humanReviewDecision: parsed.data.decision,
           reviewedAt: new Date(),
           reviewedById: reviewerId,
+          finalCompanyPriority: parsed.data.decision === "CONFIRMED" ? parsed.data.finalCompanyPriority : null,
+          recommendedCompanyPriority: recommendedPriority,
+          priorityPolicyVersion: priorityContext.policyVersion,
         },
       });
 
@@ -87,6 +116,9 @@ export const humanReviewService = {
           previousStatus: incident.status,
           nextStatus,
           reviewedById: reviewerId,
+          finalCompanyPriority: parsed.data.decision === "CONFIRMED" ? parsed.data.finalCompanyPriority : null,
+          recommendedCompanyPriority: recommendedPriority,
+          priorityPolicyVersion: priorityContext.policyVersion,
         },
       });
 

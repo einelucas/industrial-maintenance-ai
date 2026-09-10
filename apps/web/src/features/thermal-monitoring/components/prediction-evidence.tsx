@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ThermalRiskBadge } from "./thermal-status";
 import { numeric, THERMAL_CAUSE_LABELS, type TraceablePrediction } from "@/features/thermal-monitoring/services/thermal-presentation";
 import { formatDateTime } from "@/lib/utils/format";
+import { COMPANY_PRIORITY_LABELS } from "@/features/thermal-priority/constants";
 
 export function PredictionEvidence({ prediction, title = "Evidência da IA" }: { prediction: TraceablePrediction; title?: string }) {
   const explanations = Array.isArray(prediction.explanations) ? prediction.explanations.filter((v): v is string => typeof v === "string") : [];
@@ -32,6 +33,7 @@ export function PredictionEvidence({ prediction, title = "Evidência da IA" }: {
           <dt className="text-muted-foreground">Tendência / persistência acima do limite</dt>
           <dd>{numeric(prediction.trendCPerHour, " °C/h")} / {numeric(prediction.timeAboveLimitMin, " min")}</dd>
         </div>
+        <div><dt className="text-muted-foreground">Prioridade empresarial recomendada</dt><dd>{prediction.recommendedCompanyPriority ? COMPANY_PRIORITY_LABELS[prediction.recommendedCompanyPriority] : "—"}</dd><small className="text-muted-foreground">Política: {prediction.priorityPolicyVersion ?? "não registrada"}</small></div>
       </dl>
       <div><h3 className="font-medium">Fatores determinantes</h3><ul className="mt-2 list-disc space-y-1 pl-5">{explanations.map((explanation, index) => <li key={index}>{explanation}</li>)}</ul></div>
       <p><strong>Ação sugerida pela IA:</strong> {prediction.recommendedAction ?? "Não informada pelo modelo."}</p>

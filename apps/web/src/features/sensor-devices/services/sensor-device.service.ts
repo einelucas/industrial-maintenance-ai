@@ -71,6 +71,7 @@ export const sensorDeviceService = {
       thermalPointId: data.thermalPointId,
       apiKeyHash: hash,
       status: "PROVISIONING",
+      credentialRotatedAt: new Date(),
     });
 
     return { device, apiKey: plaintext };
@@ -95,8 +96,18 @@ export const sensorDeviceService = {
       apiKeyHash: hash,
       status: "PROVISIONING",
       disabledAt: null,
+      credentialVersion: { increment: 1 },
+      credentialRotatedAt: new Date(),
+      consecutiveAuthFailures: 0,
+      lastAuthFailureAt: null,
     });
     return { device, apiKey: plaintext };
+  },
+
+  async setMaintenance(id: string, maintenance: boolean) {
+    const device = await this.getOrThrow(id);
+    if (device.status === "DISABLED") throw new ValidationError("Dispositivo revogado deve ser reprovisionado antes de mudar de estado.");
+    return sensorDeviceRepository.update(id, { status: maintenance ? "MAINTENANCE" : "PROVISIONING" });
   },
 
   /**

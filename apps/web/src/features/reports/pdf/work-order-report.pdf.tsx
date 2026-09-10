@@ -33,6 +33,18 @@ export function WorkOrderReportDocument({ workOrder }: { workOrder: WorkOrder })
             <Text style={styles.kvLabel}>Prioridade</Text>
             <Text style={styles.kvValue}>{PRIORITY_LABEL[workOrder.priority] ?? workOrder.priority}</Text>
           </View>
+          {workOrder.type === "PREDICTIVE" && (
+            <>
+              <View style={styles.kvRow}>
+                <Text style={styles.kvLabel}>Prioridade empresarial</Text>
+                <Text style={styles.kvValue}>{workOrder.companyPriority ?? "—"}</Text>
+              </View>
+              <View style={styles.kvRow}>
+                <Text style={styles.kvLabel}>Política térmica</Text>
+                <Text style={styles.kvValue}>{workOrder.priorityPolicyVersion ?? "—"}</Text>
+              </View>
+            </>
+          )}
           <View style={styles.kvRow}>
             <Text style={styles.kvLabel}>Equipamento</Text>
             <Text style={styles.kvValue}>{workOrder.equipment.tag} — {workOrder.equipment.name}</Text>

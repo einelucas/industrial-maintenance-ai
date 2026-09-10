@@ -1,4 +1,4 @@
-import type { AnalysisStatus, DeviceStatus, MonitoringMode, Prediction, RiskLevel, ThermalCause } from "@prisma/client";
+import type { AnalysisStatus, CompanyThermalPriority, DeviceStatus, MonitoringMode, Prediction, RiskLevel, ThermalCause } from "@prisma/client";
 import { thermalInferenceResponseSchema } from "@/features/ai-core/schemas/thermal-inference-response.schema";
 import type { AiCoreStateStatus } from "@/features/ai-core/services/ai-core-state.service";
 
@@ -73,10 +73,11 @@ export function currentPointRisk(
 export interface MonitoringFilters {
   search?: string; sectorId?: string; equipmentId?: string; panelId?: string; componentId?: string;
   risk?: string; connectivity?: string;
+  companyPriority?: string;
 }
 
 export interface FilterablePoint {
-  code: string; name: string; currentRisk: RiskLevel | null; connectivity: Connectivity;
+  code: string; name: string; currentRisk: RiskLevel | null; connectivity: Connectivity; historicalPriority: CompanyThermalPriority | null;
   component: { id: string; panel: { id: string; sectorId: string; equipmentId: string | null } };
 }
 
@@ -88,6 +89,7 @@ export function filterMonitoringPoints<T extends FilterablePoint>(points: T[], f
     (!filters.panelId || p.component.panel.id === filters.panelId) &&
     (!filters.componentId || p.component.id === filters.componentId) &&
     (!filters.risk || (filters.risk === "PENDING_AI" ? p.currentRisk === null : p.currentRisk === filters.risk)) &&
+    (!filters.companyPriority || p.historicalPriority === filters.companyPriority) &&
     (!filters.connectivity || p.connectivity === filters.connectivity));
 }
 

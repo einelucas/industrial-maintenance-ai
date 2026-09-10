@@ -86,6 +86,8 @@ export const thermalIncidentService = {
                 : (existing.peakDeltaTC ?? currentDeltaTC),
             lastRiskScore: riskScore,
             triggerCount: { increment: 1 },
+            recommendedCompanyPriority: prediction.recommendedCompanyPriority,
+            priorityPolicyVersion: prediction.priorityPolicyVersion,
           },
         });
         await thermalAlertService.upsertForIncident(tx, updated, prediction, point);
@@ -102,6 +104,8 @@ export const thermalIncidentService = {
           lastRiskScore: riskScore,
           triggerPredictionId: prediction.id,
           triggerCount: 1,
+          recommendedCompanyPriority: prediction.recommendedCompanyPriority,
+          priorityPolicyVersion: prediction.priorityPolicyVersion,
         },
       });
       await thermalAlertService.upsertForIncident(tx, created, prediction, point);

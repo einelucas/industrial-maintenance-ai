@@ -7,12 +7,13 @@ export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, string> = {
 };
 export const REVIEW_LABELS = { CONFIRMED: "Confirmar defeito", REJECTED: "Rejeitar", INCONCLUSIVE: "Inconclusivo", NEW_READING_REQUIRED: "Solicitar nova leitura" } as const;
 
-export function workOrderBlockReason(input: { aiStatus: string; canConvert: boolean; status: string; decision: string | null; workOrderId: string | null; equipmentId: string | null; validEvidence: boolean }): string | null {
+export function workOrderBlockReason(input: { aiStatus: string; canConvert: boolean; status: string; decision: string | null; workOrderId: string | null; equipmentId: string | null; validEvidence: boolean; finalCompanyPriority: string | null; priorityPolicyVersion: string | null }): string | null {
   if (!input.canConvert) return "Seu perfil não permite autorizar OS preditiva.";
   if (input.workOrderId) return "Este incidente já possui uma OS vinculada.";
   if (input.aiStatus !== "READY") return "A IA precisa estar pronta para autorizar uma nova OS preditiva.";
   if (!input.validEvidence) return "A evidência da IA não possui proveniência válida.";
   if (input.status !== "HUMAN_CONFIRMED" || input.decision !== "CONFIRMED") return "Confirme o defeito na revisão humana antes de autorizar a OS.";
+  if (!input.finalCompanyPriority || !input.priorityPolicyVersion) return "A confirmação anterior não registrou a versão da política empresarial. Confirme novamente a decisão ao lado.";
   if (!input.equipmentId) return "O painel precisa estar vinculado a um equipamento real para receber uma OS.";
   return null;
 }

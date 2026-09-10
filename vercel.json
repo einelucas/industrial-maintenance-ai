@@ -4,6 +4,19 @@
     "web": {
       "root": "apps/web",
       "framework": "nextjs",
+      "functions": {
+        "src/app/api/queues/thermal-analysis/route.ts": {
+          "maxDuration": 60,
+          "experimentalTriggers": [
+            {
+              "type": "queue/v2beta",
+              "topic": "thermal-analysis",
+              "retryAfterSeconds": 5,
+              "initialDelaySeconds": 0
+            }
+          ]
+        }
+      },
       "bindings": [
         {
           "type": "service",
@@ -20,6 +33,12 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/v1/telemetry/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    },
     {
       "source": "/api/v1/(.*)",
       "destination": {

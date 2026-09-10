@@ -26,6 +26,10 @@ const SAFE_SELECT = {
   calibrationDate: true,
   installedAt: true,
   disabledAt: true,
+  credentialVersion: true,
+  credentialRotatedAt: true,
+  lastAuthFailureAt: true,
+  consecutiveAuthFailures: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.SensorDeviceSelect;
@@ -59,7 +63,11 @@ export const sensorDeviceRepository = {
   findById: (id: string) =>
     prisma.sensorDevice.findUnique({
       where: { id },
-      select: { ...SAFE_SELECT, thermalPoint: { select: { id: true, code: true, name: true } } },
+      select: {
+        ...SAFE_SELECT,
+        thermalPoint: { select: { id: true, code: true, name: true } },
+        technicalAlerts: { orderBy: { openedAt: "desc" }, take: 20 },
+      },
     }),
 
   findBySerialNumber: (serialNumber: string) => prisma.sensorDevice.findUnique({ where: { serialNumber } }),

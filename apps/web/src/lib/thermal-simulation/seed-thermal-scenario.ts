@@ -4,6 +4,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PrismaClient } from "@prisma/client";
 import { buildDemoScenario, buildReservedScenarioManifest, DEMO_IDENTITY_SEED, DEMO_SERIES_SEED } from "./scenario";
+import {
+  DEMO_PRIORITY_DEFINITIONS,
+  DEMO_PRIORITY_POLICY_VERSION,
+  DEMO_RISK_TO_COMPANY_PRIORITY,
+} from "@/features/thermal-priority/services/thermal-priority-policy.service";
+import {
+  EXPECTED_ORIGINAL_DISTRIBUTION,
+  ORIGINAL_INSPECTION_REFERENCE,
+} from "@/features/thermal-inspections/services/thermal-inspection.service";
 
 // Grava o cenário demonstrativo determinístico (Etapa 2 / GPMS 2026) no banco
 // real, pelas mesmas tabelas/relações que a aplicação usa — nunca dados
@@ -57,6 +66,8 @@ export interface SeedThermalScenarioResult {
   devices: number;
   readingsInserted: number;
   skippedExistingPoints: number;
+  inspections: number;
+  inspectionFindings: number;
   manifestPath: string;
 }
 
@@ -264,6 +275,93 @@ export async function seedThermalScenario(
     readingsInserted += result.count;
   }
 
+  // Política demonstrativa versionada. P30/P50/P100 permanecem explicitamente
+  // sem definição; a aplicação nunca cria significado para esses níveis.
+  await prisma.thermalPriorityPolicy.createMany({
+    data: [{
+      version: DEMO_PRIORITY_POLICY_VERSION,
+      status: "DEMO_DRAFT",
+      definitions: JSON.parse(JSON.stringify(DEMO_PRIORITY_DEFINITIONS)),
+      riskMapping: JSON.parse(JSON.stringify(DEMO_RISK_TO_COMPANY_PRIORITY)),
+      validatedLevels: ["P5", "P10", "P20"],
+      notes: "Mapeamento demonstrativo. P30, P50 e P100 aguardam definição oficial da empresa.",
+    }],
+    skipDuplicates: true,
+  });
+
+  // A fonte disponibilizada informa a distribuição e identifica o TP-039,
+  // mas não traz a identidade do segundo P20. Por isso a inspeção registra
+  // explicitamente que o segundo código é um mapeamento demonstrativo
+  // determinístico, a ser reconciliado com o relatório oficial no piloto.
+  let inspection = await prisma.thermalInspection.findUnique({
+    where: { sourceReference: ORIGINAL_INSPECTION_REFERENCE },
+    include: { findings: true },
+  });
+
+  if (!inspection) {
+    const anomalous = blueprint.points.filter((point) => point.initiallyAnomalous);
+    const critical = anomalous.find((point) => point.isOfficialCriticalCase)!;
+    const ordered = [critical, ...anomalous.filter((point) => !point.isOfficialCriticalCase).sort((a, b) => a.code.localeCompare(b.code))];
+    const inspectedAt = seriesByPointCode.get(critical.code)!.persisted.at(-1)!.measuredAt;
+
+    const findings = await Promise.all(ordered.map(async (point, index) => {
+      const companyPriority: "P20" | "P10" | "P5" = index < 2 ? "P20" : index < 12 ? "P10" : "P5";
+      const sourcePriorityLabel = companyPriority === "P20" ? "Prioridade 3" : companyPriority === "P10" ? "Prioridade 4" : "Prioridade 5";
+      const series = seriesByPointCode.get(point.code)!;
+      const originalReading = series.persisted.at(-1)!;
+      const deviceId = deviceIdBySerial.get(`SIM-${point.code}`)!;
+      const persistedReading = await prisma.thermalReading.findUnique({
+        where: { sensorDeviceId_sequence: { sensorDeviceId: deviceId, sequence: BigInt(originalReading.sequence) } },
+        select: { id: true },
+      });
+      return {
+        thermalPointId: pointIdByCode.get(point.code)!,
+        thermalReadingId: persistedReading?.id,
+        sourcePriorityLabel,
+        companyPriority,
+        temperatureMaxC: originalReading.temperatureMaxC,
+        referenceTemperatureC: originalReading.referenceTemperatureC,
+        deltaTC: originalReading.deltaTC,
+        recommendation: companyPriority === "P20"
+          ? "Intervir em até 30 dias."
+          : companyPriority === "P10"
+            ? "Intervir em parada programada."
+            : "Intensificar monitoramento.",
+        observedCause: point.isOfficialCriticalCase ? "LOOSE_CONNECTION" as const : null,
+        historicalBaseline: true,
+      };
+    }));
+
+    await prisma.$transaction(async (tx) => {
+      const createdInspection = await tx.thermalInspection.create({ data: {
+        sourceReference: ORIGINAL_INSPECTION_REFERENCE,
+        inspectedAt,
+        technicianName: "Inspeção original do desafio GPMS 2026",
+        notes: "Distribuição original preservada. A identidade do segundo P20 é um mapeamento demonstrativo até reconciliação com o relatório oficial.",
+        immutable: true,
+      } });
+      await tx.thermalInspectionFinding.createMany({
+        data: findings.map((finding) => ({ ...finding, inspectionId: createdInspection.id })),
+      });
+    });
+
+    inspection = await prisma.thermalInspection.findUnique({
+      where: { sourceReference: ORIGINAL_INSPECTION_REFERENCE },
+      include: { findings: true },
+    });
+    if (!inspection) throw new Error("Falha ao persistir a inspeção original.");
+  }
+
+  const findingDistribution = inspection.findings.reduce<Record<string, number>>((acc, finding) => {
+    acc[finding.companyPriority] = (acc[finding.companyPriority] ?? 0) + 1;
+    return acc;
+  }, {});
+  for (const [priority, expected] of Object.entries(EXPECTED_ORIGINAL_DISTRIBUTION)) {
+    if ((findingDistribution[priority] ?? 0) !== expected) {
+      throw new Error(`Inspeção original inconsistente para ${priority}: esperado ${expected}, encontrado ${findingDistribution[priority] ?? 0}.`);
+    }
+  }
+
   const manifest = buildReservedScenarioManifest(scenario);
   await mkdir(path.dirname(manifestPath), { recursive: true });
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
@@ -277,6 +375,8 @@ export async function seedThermalScenario(
     devices: blueprint.points.length,
     readingsInserted,
     skippedExistingPoints,
+    inspections: 1,
+    inspectionFindings: inspection.findings.length,
     manifestPath,
   };
 }

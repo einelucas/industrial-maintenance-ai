@@ -32,6 +32,8 @@ export const thermalAlertService = {
           peakTemperatureC: incident.peakTemperatureC,
           peakDeltaTC: incident.peakDeltaTC,
           ...(escalated ? { escalatedAt: new Date() } : {}),
+          companyPriority: incident.recommendedCompanyPriority,
+          priorityPolicyVersion: incident.priorityPolicyVersion,
         },
       });
     }
@@ -53,6 +55,8 @@ export const thermalAlertService = {
         triggerCount: 1,
         peakTemperatureC: incident.peakTemperatureC,
         peakDeltaTC: incident.peakDeltaTC,
+        companyPriority: incident.recommendedCompanyPriority,
+        priorityPolicyVersion: incident.priorityPolicyVersion,
       },
     });
   },

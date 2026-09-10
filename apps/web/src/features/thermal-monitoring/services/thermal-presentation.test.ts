@@ -38,12 +38,13 @@ describe("apresentação térmica fail-closed", () => {
     expect(summarizeMonitoringPoints(points)).toEqual({ total: 55, counts: { LOW: 0, MODERATE: 0, HIGH: 0, CRITICAL: 0 }, unclassified: 55, offline: 0 });
   });
   it("aplica todos os filtros em conjunto e não perde severidade crítica", () => {
-    const critical = { code: "TP-039", name: "Conexão", currentRisk: "CRITICAL" as const, connectivity: "OFFLINE" as const, component: { id: "component", panel: { id: "panel", sectorId: "sector", equipmentId: "equipment" } } };
+    const critical = { code: "TP-039", name: "Conexão", currentRisk: "CRITICAL" as const, historicalPriority: "P20" as const, connectivity: "OFFLINE" as const, component: { id: "component", panel: { id: "panel", sectorId: "sector", equipmentId: "equipment" } } };
     const pending = { ...critical, code: "TP-040", currentRisk: null };
     const filters = { search: "tp-039", sectorId: "sector", equipmentId: "equipment", panelId: "panel", componentId: "component", risk: "CRITICAL", connectivity: "OFFLINE" };
     expect(filterMonitoringPoints([critical, pending], filters)).toEqual([critical]);
     expect(filterMonitoringPoints([critical, pending], { ...filters, sectorId: "other" })).toEqual([]);
     expect(filterMonitoringPoints([critical, pending], { risk: "PENDING_AI" })).toEqual([pending]);
+    expect(filterMonitoringPoints([critical, pending], { companyPriority: "P20" })).toEqual([critical, pending]);
   });
   it("mantém ausência distinta de zero e informa idade real", () => {
     expect(numeric(null)).toBe("—"); expect(numeric(0, " °C")).toBe("0 °C");
@@ -72,11 +73,11 @@ describe("conectividade independente do risco", () => {
 });
 
 describe("elegibilidade da OS na interface", () => {
-  const eligible = { aiStatus: "READY", canConvert: true, status: "HUMAN_CONFIRMED", decision: "CONFIRMED", workOrderId: null, equipmentId: "real-equipment", validEvidence: true };
+  const eligible = { aiStatus: "READY", canConvert: true, status: "HUMAN_CONFIRMED", decision: "CONFIRMED", workOrderId: null, equipmentId: "real-equipment", validEvidence: true, finalCompanyPriority: "P20", priorityPolicyVersion: "policy-v1" };
   it("habilita somente com confirmação, permissão, IA pronta e equipamento real", () => {
     expect(workOrderBlockReason(eligible)).toBeNull();
   });
-  it.each([{ aiStatus: "AI_CORE_UNAVAILABLE" }, { aiStatus: "DEGRADED" }, { canConvert: false }, { status: "PENDING_HUMAN_REVIEW", decision: null }, { status: "HUMAN_REJECTED", decision: "REJECTED" }, { equipmentId: null }, { workOrderId: "existing" }, { validEvidence: false }])("explica o bloqueio: %j", (change) => {
+  it.each([{ aiStatus: "AI_CORE_UNAVAILABLE" }, { aiStatus: "DEGRADED" }, { canConvert: false }, { status: "PENDING_HUMAN_REVIEW", decision: null }, { status: "HUMAN_REJECTED", decision: "REJECTED" }, { equipmentId: null }, { workOrderId: "existing" }, { validEvidence: false }, { finalCompanyPriority: null }, { priorityPolicyVersion: null }])("explica o bloqueio: %j", (change) => {
     expect(workOrderBlockReason({ ...eligible, ...change })).toEqual(expect.any(String));
   });
 });

@@ -300,9 +300,10 @@ describe.skipIf(!TEST_DATABASE_URL)("Orquestração AI-first — integração Po
 
     // --- Revisão humana ---
     const { humanReviewService } = await import("@/features/thermal-incidents/services/human-review.service");
-    const reviewed = await humanReviewService.submit({ thermalIncidentId: incident.id, decision: "CONFIRMED" }, reviewerId);
+    const reviewed = await humanReviewService.submit({ thermalIncidentId: incident.id, decision: "CONFIRMED", finalCompanyPriority: "P20" }, reviewerId);
     expect(reviewed.status).toBe("HUMAN_CONFIRMED");
     expect(reviewed.humanReviewDecision).toBe("CONFIRMED");
+    expect(reviewed.finalCompanyPriority).toBe("P20");
 
     const reviews = await prisma.humanReview.findMany({ where: { thermalIncidentId: incident.id } });
     expect(reviews).toHaveLength(1);
@@ -319,6 +320,8 @@ describe.skipIf(!TEST_DATABASE_URL)("Orquestração AI-first — integração Po
     expect(workOrder.sourcePredictionId).toBe(result.predictionId);
     expect(workOrder.equipmentId).toBe(equipmentId);
     expect(workOrder.thermalPointId).toBe(point.id);
+    expect(workOrder.companyPriority).toBe("P20");
+    expect(workOrder.priorityPolicyVersion).toBeTruthy();
 
     const history = await prisma.workOrderHistory.findMany({ where: { workOrderId: workOrder.id } });
     history.forEach((h) => createdIds.workOrderHistory.push(h.id));

@@ -16,6 +16,9 @@
     "thermal:load-reserved": "tsx scripts/load-reserved-thermal-scenario.ts",
     "thermal:verify-ai": "tsx scripts/verify-thermal-ai-integration.ts",
     "thermal:verify-db-flow": "tsx scripts/verify-thermal-db-flow.ts",
+    "telemetry:gateway": "tsx scripts/simulate-thermal-gateway.ts",
+    "telemetry:capacity": "tsx scripts/verify-telemetry-capacity.ts",
+    "stage9:verify": "tsx scripts/verify-stage9-readiness.ts",
     "demo:verify": "tsx scripts/verify-demo-readiness.ts",
     "test": "vitest run"
   },
@@ -35,6 +38,7 @@
     "@radix-ui/react-tabs": "1.1.0",
     "@react-pdf/renderer": "^4.6.0",
     "@tanstack/react-table": "8.20.5",
+    "@vercel/queue": "^0.5.1",
     "bcryptjs": "2.4.3",
     "class-variance-authority": "0.7.0",
     "clsx": "2.1.1",

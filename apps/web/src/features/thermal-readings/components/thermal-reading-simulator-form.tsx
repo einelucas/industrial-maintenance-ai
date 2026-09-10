@@ -8,7 +8,7 @@ import {
   type RunPlantDemoFormState,
   type RunThermalReadingSimulatorFormState,
 } from "@/features/thermal-readings/actions/run-thermal-reading-simulator.action";
-import { SIMULATOR_SCENARIOS } from "@/features/thermal-readings/services/thermal-reading-simulator.service";
+import { SIMULATOR_SCENARIOS } from "@/lib/thermal-simulation/reading-scenarios";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";

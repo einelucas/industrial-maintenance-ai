@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { formatDateTime } from "@/lib/utils/format";
+import { setSensorDeviceMaintenanceAction } from "@/features/sensor-devices/actions/set-sensor-device-maintenance.action";
 
 export default async function SensorDeviceDetailPage({ params }: { params: { id: string } }) {
   const user = await requirePermission("device:view");
@@ -36,12 +37,12 @@ export default async function SensorDeviceDetailPage({ params }: { params: { id:
           </div>
         </div>
         {canManage && !isRevoked && (
-          <form action={revokeSensorDeviceAction}>
+          <div className="flex flex-wrap gap-2"><form action={setSensorDeviceMaintenanceAction}><input type="hidden" name="deviceId" value={device.id} /><input type="hidden" name="maintenance" value={device.status === "MAINTENANCE" ? "false" : "true"} /><Button type="submit" variant="outline">{device.status === "MAINTENANCE" ? "Sair da manutenção" : "Colocar em manutenção"}</Button></form><form action={revokeSensorDeviceAction}>
             <input type="hidden" name="deviceId" value={device.id} />
             <Button type="submit" variant="destructive">
               Revogar
             </Button>
-          </form>
+          </form></div>
         )}
       </div>
 
@@ -88,6 +89,8 @@ export default async function SensorDeviceDetailPage({ params }: { params: { id:
           </CardHeader>
           <CardContent className="text-sm">{formatDateTime(device.createdAt)}</CardContent>
         </Card>
+        <Card><CardHeader><CardTitle>Credencial</CardTitle></CardHeader><CardContent className="text-sm">Versão {device.credentialVersion} · Rotação: {formatDateTime(device.credentialRotatedAt)}</CardContent></Card>
+        <Card><CardHeader><CardTitle>Falhas de autenticação</CardTitle></CardHeader><CardContent className="text-sm">Consecutivas: {device.consecutiveAuthFailures} · Última: {formatDateTime(device.lastAuthFailureAt)}</CardContent></Card>
         {isRevoked && (
           <Card>
             <CardHeader>
@@ -112,6 +115,8 @@ export default async function SensorDeviceDetailPage({ params }: { params: { id:
           </CardContent>
         </Card>
       )}
+
+      <Card><CardHeader><CardTitle>Alertas técnicos de comunicação</CardTitle></CardHeader><CardContent className="space-y-3 text-sm">{!device.technicalAlerts.length && <p>Nenhum alerta técnico registrado.</p>}{device.technicalAlerts.map((alert) => <div key={alert.id} className="rounded-md border p-3"><p className="font-medium">{alert.type} · {alert.status}</p><p className="text-muted-foreground">Aberto: {formatDateTime(alert.openedAt)} · Última observação: {formatDateTime(alert.lastObservedAt)} · Resolvido: {formatDateTime(alert.resolvedAt)}</p></div>)}</CardContent></Card>
     </div>
   );
 }

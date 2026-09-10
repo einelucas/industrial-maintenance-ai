@@ -1,126 +1,177 @@
-# Checklist — Pendências e Otimizações
+# Checklist — aderência estrita ao desafio GPMS 2026
 
-> Última revisão: itens marcados `[x]` foram implementados e verificados
-> (typecheck/lint/test + teste manual via navegador real, quando aplicável).
-> Itens `[ ]` continuam pendentes. Onde um item foi parcialmente resolvido,
-> isso está explicado no próprio texto em vez de marcado como concluído.
+> Revisão contratual: 09/09/2026. Esta é a lista operacional de pendências após a Etapa 9. Itens legados sem relação direta com o desafio foram retirados do caminho crítico e aparecem no fim como descartados ou adiados.
 
-## Fechamento térmico antes da Etapa 9 — 09/09/2026
+## Estado confirmado ao encerrar a Etapa 9
 
-- [x] Etapas 1–8 encerradas no escopo necessário para iniciar telemetria.
-- [x] Campos numéricos térmicos opcionais vazios não viram mais zero.
-- [x] Probabilidade supervisionada, confiança da classe, score ML e risco
-  operacional possuem semânticas separadas no contrato e na persistência.
-- [x] Hipóteses de falha e scores possuem rótulos operacionais claros na UI.
-- [x] Gráficos usam eixo temporal proporcional e deixam lacunas identificáveis.
-- [x] Validação desktop no deploy registrada a partir das capturas do usuário.
-- [ ] Mobile/teclado e E2E versionado — Etapa 11, não bloqueia a Etapa 9.
-- [ ] Teste de carga, rate limiting e reconexão — escopo das Etapas 9/11.
-- [ ] Validação com dados reais da planta — Etapa 12.
+- [x] Domínio termográfico, hierarquia da planta e 55 pontos cadastrados.
+- [x] Cenário sintético persistido com 19 sinais anormais atuais.
+- [x] Caso crítico TP-039 reproduzido em 75,6 °C contra referência de 40 °C, com ΔT de 35,6 °C.
+- [x] Modelo térmico carregado como `SYNTHETIC_EXPERIMENTAL`, com inferência e proveniência visíveis.
+- [x] Fluxo `ThermalReading → Prediction → incidente → revisão humana → OS condicionada` demonstrável.
+- [x] Origem sintética e limites da IA informados na interface.
+- [x] A indisponibilidade da IA não deve produzir resultado analítico substituto.
+- [x] O backlog possui fila PostgreSQL durável, lease/`SKIP LOCKED`, backoff, recuperação de `AI_FAILED` transitório, consumidor Vercel Queues e cron diário apenas reconciliador.
 
-## 🔴 Bloqueadores para produção (fazer antes de qualquer deploy real)
+## Requisitos contratuais que bloqueiam a conclusão
 
-- [x] ~~Rodar `npx prisma generate` + `npx prisma migrate dev`~~ — feito repetidas vezes com sucesso (internet confirmada disponível no ambiente). **Atenção:** `prisma migrate dev` falha neste projeto com um erro do Neon (`P1001` / "terminating connection due to administrator command") ao criar o shadow database — é uma limitação conhecida do Neon com múltiplos databases no mesmo branch, não falta de internet. Workaround usado em todas as migrations desta fase: `prisma db push` (aplica o schema direto) + arquivo de migration escrito manualmente + `prisma migrate resolve --applied` (mantém o histórico de migrations consistente). Documentar esse processo formalmente é o item que falta (ver seção DevOps).
-- [ ] Trocar `AUTH_SECRET`, `AI_SERVICE_API_KEY` **e `CRON_SECRET`** (novo — usado pelo scheduler automático de OS preventivas) de desenvolvimento por valores fortes e únicos em produção
-- [ ] Configurar `NEXTAUTH_URL` com o domínio real de produção
-- [ ] Revisar CORS do FastAPI (`CORS_ORIGINS`) caso o endpoint público seja consumido diretamente pelo navegador; a aplicação usa binding interno server-to-server
-- [x] Definir estratégia de deploy do FastAPI — Vercel Services, em container descrito por `Dockerfile.vercel`
-- [x] Garantir que o build do FastAPI recupere o modelo ignorado pelo Git — a imagem Vercel usa a raiz, treina e valida o bundle/checksum em estágio isolado
-- [x] Definir estratégia de deploy do Next.js — serviço `web` no mesmo projeto Vercel, com um único cron diário
-- [x] Conectar Next.js e FastAPI sem hostname público fixo — binding Vercel deployment-aware e autenticação por `AI_SERVICE_API_KEY`
-- [x] Projeto versionado em Git, branch `main`, com remoto `origin` configurado
-- [x] Pré-voo somente leitura `pnpm demo:verify` valida IA, banco, TP-039 e estado fresco do roteiro antes da apresentação
-- [x] Consolidar automações Vercel em uma única execução diária autenticada
+A solução final não poderá ser declarada aderente enquanto faltar qualquer item abaixo:
 
-## 🟣 Machine Learning — dataset e modelo (novo desde a última revisão)
+- [x] Preservar a inspeção original com exatamente 19 achados: 2 “Prioridade 3 (P20)”, 10 “Prioridade 4 (P10)” e 7 “Prioridade 5 (P5)”.
+- [x] Implementar a classificação empresarial P5–P100 sem confundi-la com risco da IA ou prioridade da OS.
+- [!] Obter da empresa o significado oficial de P30, P50 e P100. O software reconhece os códigos, mas mantém ação/prazo bloqueados até a validação externa da Etapa 12.
+- [x] Preservar os significados já fornecidos: P20 = intervir em até 30 dias; P10 = intervir em parada programada; P5 = intensificar monitoramento.
+- [ ] Rastrear por TAG a inspeção, o termograma, a leitura, a recomendação, a inferência, a decisão, o incidente e a OS.
+- [x] Receber e analisar telemetria continuamente por fila PostgreSQL + Vercel Queues, sem depender da única execução diária do cron.
+- [ ] Suportar implantação segura junto a quadros energizados, sem alterar proteções nem causar interrupção não planejada.
+- [ ] Validar o sistema e o modelo com dados reais antes de alegar eficácia industrial.
+- [ ] Demonstrar expansão pela mesma arquitetura para autoclaves, estufas, câmaras frias, quadros e mais de 20 centrífugas.
+- [ ] Tratar aquecimento por resistência elevada/conexão frouxa como modo provável relevante, sem declarar oxidação ou subdimensionamento como causa confirmada antes da inspeção humana.
 
-- [x] Corrigida inconsistência de schema: `SensorReading` no Prisma não tinha `airTemperature`, `processTemperature`, `toolWear`, `rotationalSpeed`, que o FastAPI (`prediction_input.py`) já esperava — campos adicionados, propagados por schema Zod, formulário manual, repository, service, simulador e `predictive-ai.client.ts`
-- [x] `training/prepare_dataset.py` reescrito com base em fontes reais citadas (AI4I 2020 Predictive Maintenance Dataset + ISO 10816-3 para vibração), documentado no topo do arquivo, incluindo as duas decisões de calibração que se afastam do texto literal do AI4I (e por quê — random walk vira Normal i.i.d. por linha; potência de referência recalibrada de 2860W para ~6250W)
-- [x] Pipeline de treino rodado de verdade: **Gradient Boosting** venceu (F1=0,689, ROC-AUC=0,993, precision=0,546, recall=0,933), `models/model.joblib`/`metadata.json` gerados, `/health` confirma `predictorType: "sklearn"`
-- [x] `GradientBoostingClassifier` não aceita `class_weight` (ao contrário de LogisticRegression/RandomForest) — balanceamento de classes aplicado via `sample_weight` no `.fit()`
-- [ ] Taxa de falha do dataset sintético ficou em **3,58%** (alvo do AI4I original: ~3,4%) — próximo, mas não idêntico; revisar se vale a pena recalibrar ainda mais os parâmetros de geração (`power_reference`, escala do `tool_wear`) ou se essa margem é aceitável
-- [ ] Tabela de medições na página do equipamento não exibe os 4 campos novos (`airTemperature`, `processTemperature`, `toolWear`, `rotationalSpeed`) — só o formulário manual e o simulador os usam
-- [ ] Import de CSV de leituras não inclui os 4 campos novos no schema da linha (`sensor-reading-csv-row.schema.ts`) — CSVs históricos não conseguem trazer esses dados ainda
-- [ ] Campo `torque` nunca teve input no formulário manual de medição (existe no schema/repositório desde antes, gap pré-existente não relacionado às mudanças recentes)
+## Etapa 9 — processo empresarial e telemetria — concluída em 09/09/2026
 
-## 🔵 Loop de aprendizado com dados reais (feedback loop) — hoje o modelo só treina com dados sintéticos
+### 9.0 Prioridade empresarial e inspeção original
 
-- [x] Modelo `FailureEvent` no Prisma (`equipmentId`, `occurredAt`, `description?`, `workOrderId?`, `createdById`, `createdAt`) + feature completa (`schemas/repositories/services/actions/components`) seguindo o padrão do resto do projeto
-- [x] Botão **"Registrar falha real"** na página de detalhe do equipamento (aba "Falhas reais", com formulário + histórico)
-- [ ] Gatilho **ao concluir uma OS `CORRECTIVE`** (a segunda metade do item original — só a versão manual na página do equipamento foi feita)
-- [ ] Script `training/build_dataset_from_production.py`: cruza `SensorReading` histórico + `FailureEvent` (janela de tempo, ex: 7 dias antes da falha = `failure=1`) para gerar um dataset real em `datasets/processed/`
-- [ ] Endpoint/rotina de exportação desse histórico do Next.js (o Postgres operacional não deve ser acessado direto pelo script Python, mesma regra de separação já usada no resto do projeto)
-- [ ] Retreinar `training/train.py` apontando pro dataset real em vez do sintético (`prepare_dataset.py`) — `DATASET_PATH` está fixo no arquivo hoje, precisa virar parâmetro
-- [ ] Processo (manual no início, depois automatizável) de comparar métricas do modelo novo vs. modelo em produção antes de promover — nunca substituir automaticamente por um modelo pior
-- [ ] Definir a janela de tempo "leitura → falha" com o time de manutenção (7 dias é só um ponto de partida, depende do tipo de equipamento) — decisão de negócio, não técnica
-- [ ] **[NOVO]** `FailureEvent.workOrderId` não valida que a OS relacionada pertence ao mesmo equipamento — hoje é possível (por engano, via UI) vincular a falha de um equipamento a uma OS de outro
-- [ ] **[NOVO]** Hoje não há praticamente nenhum `FailureEvent` real no banco (a funcionalidade acabou de ser implementada) — mesmo depois de todo o resto deste bloco pronto, o retreino só terá valor real depois de volume acumulado em produção
+- [x] Criar enum/tabela de prioridade empresarial com P5, P10, P20, P30, P50 e P100.
+- [x] Criar entidades de inspeção e achado histórico imutável, preservando separadamente o rótulo original e o código P.
+- [x] Importar/reconciliar a inspeção original: 2×“Prioridade 3/P20”, 10×“Prioridade 4/P10” e 7×“Prioridade 5/P5”.
+- [x] Manter o TP-039 como P20 histórico; o segundo P20 permanece identificado como mapeamento demonstrativo até a fonte oficial.
+- [x] Versionar a política que relaciona evidência, recomendação e prioridade empresarial.
+- [x] Configurar P20/P10/P5 com as ações informadas no desafio e bloquear P30/P50/P100 até validação oficial.
+- [x] Copiar prioridade e versão da política para incidente, revisão, alerta, OS e relatório da OS.
+- [x] Mostrar lado a lado prioridade histórica, recomendação atual da IA e decisão humana final.
+- [x] Exigir justificativa auditável quando uma pessoa altera a prioridade recomendada; o diagnóstico da Prediction permanece imutável.
 
-## 🟢 UI/UX (novo desde a última revisão — praticamente tudo do backlog de UI foi implementado)
+### 9.1 Contrato de telemetria
 
-- [x] Componentes `button`/`input`/`label`/`card`/`badge` reescritos no padrão oficial shadcn/ui, preservando as variantes customizadas do projeto (`neutral/attention/high/critical` do Badge, `outline/ghost/destructive` do Button)
-- [x] Dark mode completo: `next-themes`, toggle no header, paleta escura para os 20 tokens de cor (base + status)
-- [x] Loading states (`Skeleton` + `loading.tsx`) em dashboard, equipamentos, OS, alertas, planos preventivos, usuários + fallback genérico
-- [x] Error boundaries (`error.tsx` no grupo autenticado, na raiz, e `global-error.tsx`)
-- [x] Paginação + busca/filtro em `/equipments`, `/work-orders`, `/alerts`
-- [x] Modal de confirmação antes de cancelar uma OS (`ConfirmDialog` reutilizável)
-- [x] Responsividade mobile das tabelas mais carregadas (colunas secundárias ocultas em telas pequenas)
-- [x] Edição de equipamentos e planos preventivos (formulário de criação virou create/edit)
-- [x] Paginação/busca em `/maintenance-plans` (nome do plano ou TAG do equipamento + filtro de frequência) e `/users` (nome/e-mail + filtro de perfil/status) — mesmo padrão de `findFiltered`/`Pagination` das outras três listagens
-- [x] `dropdown-menu`/`tabs` oficiais do shadcn/ui adicionados (`components/ui/tabs.tsx`, `components/ui/dropdown-menu.tsx`, ambos via `@radix-ui`). O `Tabs` customizado foi **removido** — a página de detalhe do equipamento migrou para a API composable (`Tabs/TabsList/TabsTrigger/TabsContent`). O `dropdown-menu` foi aplicado no menu do usuário no header (nome/perfil vira um dropdown com "Minha conta" e "Sair", no lugar do botão de logout solto)
-- [x] Checklist de itens do plano preventivo agora é editável via UI (criação **e** edição) — editor dinâmico de itens (adicionar/remover) em `plan-form.tsx`; `create-plan.action.ts`/`update-plan.action.ts` corrigidos para coletar múltiplos valores do campo `checklistItems` via `formData.getAll()` (o `Object.fromEntries()` usado em outras actions só mantém o último valor de campos repetidos — só funcionava por acidente até agora, ninguém tinha campos de múltiplo valor). Na edição, o checklist é apagado e recriado a cada save (seguro: a OS gerada sempre leva uma cópia congelada, não referencia o plano)
-- [x] Fluxo de redefinição de senha implementado dos dois lados: admin redefine a senha de qualquer usuário na tela de edição (`/users/[id]`, sem exigir a senha atual) e o próprio usuário troca a sua em uma página nova (`/account`, exige a senha atual via `bcrypt.compare`), acessível pelo novo menu dropdown do header
+- [x] Definir payload versionado para leituras em lote, independente de fabricante, protocolo ou broker.
+- [x] Autenticar cada dispositivo/gateway com credencial rotacionável e escopo mínimo.
+- [x] Validar TAG/ponto, timestamp, sequência, unidade, qualidade, limites e tamanho do lote.
+- [x] Garantir idempotência por dispositivo, sequência e identificador da leitura.
+- [x] Persistir o lote e o trabalho de análise em armazenamento durável antes de responder sucesso.
+- [x] Rejeitar cada item inválido com resultado explícito, sem leitura parcial silenciosa.
 
-## 🟡 Testes — cobertura incompleta
+### 9.2 Dispositivos, segurança e rede instável
 
-- [x] Regras de atraso de OS (`isWorkOrderDelayed`) — 6 testes
-- [x] Permissões/policies (`can`, `assertCan`, `canOperateWorkOrder`) — 9 testes
-- [x] Máquina de estados de transição de OS — 12 testes
-- [x] Validação de schemas (equipment, sensor-reading) — 11 testes
-- [x] Simulador de sensor — 4 testes (atualizado para cobrir os 4 campos AI4I novos)
-- [x] Endpoints do FastAPI (`/health`, `/predict`) — 5 testes pytest
-- [x] **[NOVO]** Faixas de risco configuráveis (`risk-threshold.schema`) — 4 testes
-- [x] **[NOVO]** Schema de usuários (create/update/reset de senha/troca de senha) — 10 testes
-- [x] **[NOVO]** Linha de CSV de leituras (trata célula vazia como ausente, não como zero) — 4 testes
-- [x] **[NOVO]** `computeNextExecution` do scheduler, todas as `FrequencyType` — 8 testes
-- [ ] Testes de integração dos **services que usam Prisma diretamente** (`work-order.service.ts`, `alert.service.ts`, `maintenance-plan.service.ts`, `prediction.service.ts`, `failure-event.service.ts`) — precisam de um banco de teste (ex: Neon branch de teste, ou Postgres local via Docker)
-- [ ] Testes de integração do fluxo completo `SensorReading → Prediction → Alert → WorkOrder`
-- [ ] Testes E2E (Playwright/Cypress) do fluxo de login → criar equipamento → criar OS → mudar status — **nenhum suite automatizado existe no repositório**. Foram feitos testes manuais extensivos com Playwright durante o desenvolvimento (login, filtros, dark mode, modais, transições de status), mas como scripts avulsos fora do repo, não como testes versionados/repetíveis. Um desses testes manuais, aliás, foi o que **encontrou dois bugs reais de submissão no formulário de transição de status de OS** (um pré-existente, um introduzido numa rodada anterior) — reforça a prioridade deste item: sem E2E versionado, esse tipo de bug só aparece quando um humano clica manualmente
+- [x] Implementar cadastro, ativação por primeira leitura válida, revogação, rotação de chave e auditoria de dispositivos.
+- [x] Proteger contra replay e abuso com clock skew, sequência e rate limiting.
+- [x] Atualizar `lastSeenAt` e estado online/offline sem tratar ausência de comunicação como normal.
+- [x] Implementar buffer no gateway e reenvio idempotente após reconexão.
+- [x] Definir retenção do log técnico, limite de payload e política de dados atrasados; evidências térmicas não são apagadas sem política empresarial.
 
-## 🟡 Segurança — pontos a revisar
+### 9.3 Processamento contínuo e escalabilidade
 
-- [ ] Rate limiting no endpoint `POST /api/v1/predict` do FastAPI (hoje sem limite de requisições)
-- [ ] Rate limiting no login (`Credentials` provider) para mitigar força bruta
-- [ ] Validar tamanho máximo de payload em todos os endpoints (Next.js Server Actions e FastAPI)
-- [ ] `AuditLog` cobre mais operações do que antes, mas ainda não é universal — hoje escreve em: criação/edição de equipamento, criação/edição/ativação/redefinição de senha de usuário, atualização de faixas de risco. **Ainda falta**: criação de OS e mudanças de status, criação/edição de planos preventivos, ações de alerta (reconhecer/converter em OS), import de CSV de leituras, registro de falha real (`FailureEvent`)
-- [ ] Adicionar expiração/refresh de sessão configurável (hoje usa o padrão do NextAuth JWT)
-- [x] ~~Sanitizar/validar uploads futuros (quando o CSV de sensores for implementado)~~ — **CSV de sensores já foi implementado** (import por equipamento, validado linha a linha via Zod, linha inválida não derruba o lote). **Ainda falta**: validação de tamanho/tipo de arquivo no servidor (hoje só o atributo `accept=".csv"` do input, que é só uma dica de UI, não uma trava real)
-- [ ] **[NOVO]** O usuário "de sistema" (`sistema@pcm.local`, criado pelo seed para o scheduler automático assinar como `createdBy` das OS geradas) precisa de uma trava para nunca ser excluído/reativado por engano pela tela de usuários — hoje nada impede isso
+- [x] Implementar fila PostgreSQL durável e consumidor Vercel Queues adequado ao ambiente serverless.
+- [x] Reservar jobs com lock/lease e impedir processamento duplicado.
+- [x] Aplicar retentativa com backoff e fila de erro recuperável.
+- [x] Reprocessar automaticamente `AI_FAILED` transitório e medir idade do item mais antigo.
+- [x] Dimensionar e testar o contrato de 55 leituras/minuto, equivalentes a 79.200 leituras/dia; o soak sustentado do deployment permanece na Etapa 11.
+- [x] Usar o cron diário somente para reconciliação, retenção, varredura de órfãos e recuperação; ele não substitui o worker contínuo.
+- [x] Expor métricas de recebidos, persistidos, analisados, falha, atraso, rejeição e duplicação.
 
-## 🟡 Regras de negócio a refinar
+### 9.4 Interface operacional
 
-- [ ] **Numeração de OS** (`OS-2026-0001`): hoje calculada por `count()`, o que pode gerar números duplicados sob concorrência alta. Trocar por uma `sequence` do Postgres ou transação com `SELECT ... FOR UPDATE`. **Atenção**: o scheduler automático de OS preventivas (novo) processa planos vencidos sequencialmente (não em paralelo) especificamente por causa dessa limitação — resolver a numeração de forma definitiva permitiria paralelizar a geração
-- [ ] **Alertas duplicados**: se o mesmo equipamento gerar várias predições de risco alto seguidas, hoje um novo `Alert` é criado a cada vez — avaliar se deveria reaproveitar/atualizar um alerta `OPEN` já existente para o mesmo equipamento
-- [ ] Cópia do checklist do plano para a OS preventiva: revisar comportamento quando o plano não tem nenhum item de checklist (hoje gera OS sem checklist, o que é esperado, mas vale confirmar com o time)
-- [ ] Definir regra de negócio para equipamentos **inativos**: hoje nada impede registrar leitura/gerar OS para um equipamento com status `INACTIVE`
-- [ ] **[NOVO]** Faixas de risco configuráveis (`RiskThresholdConfig`) valem para o sistema inteiro — não há como ter faixas diferentes por tipo/criticidade de equipamento, caso o time de confiabilidade precise disso no futuro
+- [x] Mostrar estado do dispositivo, última comunicação, última leitura e idade da última inferência.
+- [x] Distinguir claramente `PENDING_AI`, `ANALYZED`, `AI_FAILED`, offline e leitura vencida.
+- [x] Manter o botão de sincronização apenas como solicitação extraordinária de reprocessamento; a operação normal continua automática.
+- [x] Permitir filtrar por TAG, área, tipo de ativo, prioridade empresarial, risco atual e estado da análise.
 
-## 🟢 Performance / arquitetura — otimizações
+### Saída da Etapa 9
 
-- [ ] Adicionar cache/revalidação mais granular no Next.js (hoje `revalidatePath` é usado de forma ampla; pode ser otimizado com `revalidateTag`)
-- [ ] Avaliar índices adicionais no Postgres para queries do dashboard (ex: `Prediction.createdAt` já tem índice, mas queries agregadas por período podem se beneficiar de índices compostos). `FailureEvent` novo já nasceu com índices em `equipmentId` e `occurredAt`
-- [ ] `getRiskEvolution()` no dashboard busca até 200 predições e agrega em memória — trocar por agregação via SQL (`GROUP BY` por dia) quando o volume de dados crescer
-- [ ] Configurar connection pooling adequado do Prisma para o Neon (verificar `connection_limit` na `DATABASE_URL` pooled)
-- [x] ~~Adicionar `loading.tsx`/`error.tsx` do App Router nas rotas principais para melhor streaming/UX~~ — feito (ver seção UI/UX acima)
-- [ ] Avaliar mover gráficos do Recharts para client components mais isolados (hoje toda a página do dashboard é Server Component, o que é bom, mas vale revisar o bundle size do Recharts)
-- [x] Build isolado documentado: `NEXT_DIST_DIR=.next-demo-build pnpm build` evita sobrescrever o cache `.next` de um `next dev` usado no ensaio
+- [x] Distribuição histórica 2 P3/P20, 10 P4/P10 e 7 P5/P5 validada no banco.
+- [x] Política P5–P100 publicada e versionada como `DEMO_DRAFT`, com somente P5/P10/P20 validados pelo enunciado.
+- [x] Testes de capacidade (79.200 leituras), reconexão e idempotência aprovados; o soak do backlog em produção permanece na Etapa 11.
+- [x] Falhas transitórias se recuperam por Vercel Queues, backoff e reconciliação diária, sem comando manual no shell.
 
-## 🟢 DevOps / qualidade contínua
+Evidências: `docs/telemetry.md`, `pnpm --filter web telemetry:capacity`, `pnpm --filter web stage9:verify`, 353 testes gerais + 3 testes PostgreSQL específicos e build de produção aprovados em 09/09/2026.
 
-- [ ] CI (GitHub Actions ou similar) rodando: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pytest` a cada PR — **bloqueado por não ser um repositório git ainda** (ver bloqueador no topo)
-- [ ] Pre-commit hooks (lint-staged/husky) para evitar commits com erro de lint
-- [ ] Monitoramento/observabilidade: logs estruturados em produção (hoje só `console`/logging básico do FastAPI)
-- [ ] Health check do FastAPI integrado a um serviço de uptime monitoring
-- [ ] Backup automático do Neon (verificar plano/configuração no painel do Neon)
-- [ ] Documentar processo de rollback de migrations
-- [ ] **[NOVO]** Documentar formalmente (num `docs/` ou no README de `apps/web/prisma`) o workaround de `db push` + migration manual + `migrate resolve --applied` usado neste projeto por causa do bug do shadow database do Neon — sem isso, a próxima pessoa vai tropeçar no mesmo erro `P1001` e não vai saber que é uma limitação conhecida do Neon, não um problema de configuração
+## Etapa 10 — termogramas, relatórios e feedback
+
+### 10.0 Evidência termográfica
+
+- [ ] Implementar upload/importação de termograma em armazenamento privado.
+- [ ] Validar MIME, tamanho, extensão, autorização, checksum e metadados.
+- [ ] Registrar câmera/origem, emissividade, distância, ambiente e ROI quando disponíveis.
+- [ ] Vincular cada termograma a TAG/ponto, inspeção e leitura correspondente.
+- [ ] Exibir termograma e série numérica na mesma linha do tempo.
+- [ ] Definir retenção, exportação autorizada e exclusão auditada.
+- [ ] Não tornar visão computacional avançada obrigatória nesta etapa; o modelo pode operar sobre dados térmicos estruturados.
+
+### 10.1 Relatórios e decisão
+
+- [ ] Criar relatório por TAG/ponto com histórico térmico, termogramas, inferências, decisões e manutenções.
+- [ ] Criar consolidado dos 55 pontos com os 19 achados originais e o estado atual separados.
+- [ ] Incluir prioridade histórica, recomendada e final, além da versão da política.
+- [ ] Registrar confirmação, rejeição, inconclusão e solicitação de nova leitura com autoria e justificativa.
+- [ ] Mostrar normalização pós-manutenção sem apagar a evidência anterior.
+
+### Saída da Etapa 10
+
+- [ ] Um auditor autorizado reconstrói o caminho completo de qualquer TAG.
+- [ ] O relatório não apresenta dado sintético como observação industrial real.
+
+## Etapa 11 — qualidade, segurança e demonstração
+
+- [ ] Testar a taxonomia P5–P100 e a distribuição histórica 2/10/7.
+- [ ] Testar acesso autorizado e negado a termogramas.
+- [ ] Testar ingestão idempotente, replay, reconexão, fila durável, retry e recuperação de worker.
+- [ ] Executar E2E `telemetria → IA → incidente → decisão humana → OS → pós-manutenção`.
+- [ ] Executar E2E fail-closed com IA indisponível e comprovar preservação/reprocessamento dos dados.
+- [ ] Executar teste de carga mínimo de 55 pontos/minuto por período suficiente para observar estabilidade.
+- [ ] Validar navegação por teclado, responsividade e legibilidade das telas prioritárias.
+- [ ] Remover/ocultar fluxos legados sem dependência ativa que confundam a apresentação termográfica.
+- [ ] Garantir que segredos, respostas falsas, resultados analíticos semeados e fallback de demonstração não entram no build.
+
+## Etapa 12 — piloto industrial e dados reais
+
+- [ ] Obter inventário e documentação oficiais: TAGs, prioridades, termogramas, recomendações e intervenções.
+- [ ] Validar com a empresa toda a escala P5–P100 e os prazos/ações associados.
+- [ ] Selecionar piloto representativo com responsáveis de operação, elétrica, manutenção e segurança.
+- [ ] Aprovar análise de risco, NR-10, procedimento de instalação, janela autorizada e rollback físico/lógico.
+- [ ] Usar sensores e acessórios apropriados para proximidade de quadros energizados.
+- [ ] Confirmar que software/sensor não altera nem substitui disjuntor, relé ou outra proteção.
+- [ ] Instalar progressivamente e comprovar zero interrupção não planejada causada pela solução.
+- [ ] Comparar sensor contínuo com câmera termográfica de referência.
+- [ ] Medir disponibilidade, latência, cobertura, falso positivo, falso negativo e divergência por tipo de ativo.
+- [ ] Medir separadamente a qualidade da identificação de modos de falha, com foco no padrão de resistência elevada em bornes/conexões.
+- [ ] Registrar causa e ação reais após manutenção para construir dataset supervisionado.
+- [ ] Definir horizonte preditivo e critérios mínimos com a manutenção.
+- [ ] Promover modelo de dados reais somente se superar baseline/modelo anterior, com rollback disponível.
+- [ ] Planejar expansão para todos os 55 pontos e para as mais de 20 centrífugas.
+
+## Bloqueadores de produção e operação
+
+- [ ] Trocar `AUTH_SECRET`, `AI_SERVICE_API_KEY`, `CRON_SECRET` e credenciais de dispositivos por valores fortes e únicos.
+- [ ] Configurar `NEXTAUTH_URL`, URLs/bindings internos e CORS estritamente para os domínios implantados.
+- [ ] Aplicar rate limiting no login, telemetria, upload e FastAPI.
+- [ ] Validar tamanho máximo de payload/arquivo no servidor.
+- [ ] Completar auditoria de criação/alteração de OS, incidentes, revisões, dispositivos, importações e termogramas.
+- [ ] Configurar CI para lint, typecheck, testes web, testes FastAPI, migrations e verificação do modelo.
+- [ ] Configurar logs estruturados, métricas, alertas de uptime, backlog e falha de inferência.
+- [ ] Validar pooling do Prisma, backup/restore do banco, retenção e rollback de migrations.
+- [ ] Documentar o procedimento Neon usado pelo projeto sem tratar `db push` como substituto informal de migration em produção.
+- [ ] Executar `pnpm demo:verify` e o roteiro E2E antes de cada apresentação/deploy relevante.
+
+## Itens retirados do caminho crítico
+
+Os itens abaixo não devem ser implementados agora, salvo nova necessidade comprovada:
+
+- Recalibrar a taxa sintética de falhas do dataset AI4I de 3,58% para 3,4%.
+- Expandir telas/CSV com `airTemperature`, `processTemperature`, `toolWear`, `rotationalSpeed` ou `torque` do modelo mecânico legado.
+- Evoluir o fluxo genérico `FailureEvent` mecânico ou retreino por falhas mecânicas como requisito do desafio térmico.
+- Tornar MQTT obrigatório ou acoplar o domínio a um broker/fabricante específico.
+- Implementar visão computacional avançada sobre qualquer formato de termograma no primeiro piloto.
+- Implementar notificações externas antes de a empresa definir canal, responsável e escalonamento.
+- Fazer cache, índices, agregações ou otimizações de bundle sem medição que demonstre gargalo.
+- Polir módulos genéricos de PCM que não participem da cadeia térmica nem da demonstração.
+- Retreinar ou promover modelos automaticamente sem validação humana e critérios comparativos.
+- Permitir que a IA autorize manutenção, desligamento ou intervenção física.
+
+## Definição de pronto
+
+- [ ] Todos os critérios das Etapas 9–12 estão atendidos e verificados.
+- [ ] A solução demonstra os 55 pontos, os 19 achados históricos (2 P3/P20, 10 P4/P10 e 7 P5/P5) e o caso de 75,6/40/35,6 sem confundir histórico com análise atual.
+- [ ] A escala P5–P100, a rastreabilidade por TAG/termograma e o processo humano são auditáveis de ponta a ponta.
+- [ ] O monitoramento é contínuo, recuperável e não depende do cron diário nem de comandos manuais.
+- [ ] O piloto comprova segurança, zero interrupção não planejada e resultados medidos com dados reais.
+- [ ] Limitações, riscos, origem dos dados e estágio do modelo permanecem explícitos.

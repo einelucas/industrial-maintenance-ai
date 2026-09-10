@@ -9,6 +9,7 @@ import { AiGatewayError, type AiGatewayFailureReason } from "@/features/ai-core/
 import { calculateTemporalFeatures, type TemporalFeatureReading } from "@/features/ai-core/temporal-features/calculate-temporal-features";
 import type { ThermalInferenceRequest } from "@/features/ai-core/schemas/thermal-inference-request.schema";
 import { thermalIncidentService } from "@/features/thermal-incidents/services/thermal-incident.service";
+import { thermalPriorityPolicyService } from "@/features/thermal-priority/services/thermal-priority-policy.service";
 
 // Orquestrador único da cadeia AI-first (GPMS 2026 / Etapa 5):
 //
@@ -158,6 +159,8 @@ export const thermalOrchestratorService = {
       return { outcome: "FAILED", reason: error.message };
     }
 
+    const companyPriority = await thermalPriorityPolicyService.recommend(response.riskLevel);
+
     // Persistência transacional: Prediction + ThermalReading.ANALYZED +
     // InferenceRequest.SUCCEEDED juntos, ou nenhum dos três.
     const { prediction, reading } = await prisma.$transaction(async (tx) => {
@@ -187,6 +190,8 @@ export const thermalOrchestratorService = {
           modelChecksum: response.modelChecksum,
           predictedFailureMode: response.predictedFailureMode,
           failureModeConfidence: response.failureModeConfidence,
+          recommendedCompanyPriority: companyPriority.priority,
+          priorityPolicyVersion: companyPriority.policyVersion,
         },
       });
 
@@ -197,7 +202,16 @@ export const thermalOrchestratorService = {
 
       await tx.inferenceRequest.update({
         where: { id: request.id },
-        data: { status: "SUCCEEDED", predictionId: created.id, lastErrorCode: null, lastErrorMessage: null },
+        data: {
+          status: "SUCCEEDED",
+          predictionId: created.id,
+          lastErrorCode: null,
+          lastErrorMessage: null,
+          completedAt: new Date(),
+          lockedAt: null,
+          leaseExpiresAt: null,
+          lockToken: null,
+        },
       });
 
       return { prediction: created, reading: updatedReading };

@@ -220,6 +220,34 @@ enum ThermalCause {
   OTHER
 }
 
+// Classificação empresarial usada no processo termográfico. Não é sinônimo
+// de RiskLevel da IA nem de WorkOrderPriority. Os significados de P30/P50/
+// P100 permanecem não validados até a empresa fornecer a política oficial.
+enum CompanyThermalPriority {
+  P5
+  P10
+  P20
+  P30
+  P50
+  P100
+}
+
+enum ThermalPriorityPolicyStatus {
+  DEMO_DRAFT
+  COMPANY_VALIDATED
+  RETIRED
+}
+
+enum DeviceTechnicalAlertType {
+  OFFLINE
+  DEGRADED
+}
+
+enum DeviceTechnicalAlertStatus {
+  OPEN
+  RESOLVED
+}
+
 // ---------------------------------------------------------------------------
 // USUÁRIOS E AUTENTICAÇÃO (Auth.js / Credentials)
 // ---------------------------------------------------------------------------
@@ -329,6 +357,8 @@ model WorkOrder {
   // Equipment (que continua obrigatório acima). Preenchido só pelo fluxo
   // dedicado de OS preditiva térmica; nunca pelo formulário genérico.
   thermalPointId     String?
+  companyPriority      CompanyThermalPriority?
+  priorityPolicyVersion String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -507,6 +537,8 @@ model Prediction {
   modelChecksum         String?
   predictedFailureMode  ThermalCause?
   failureModeConfidence Float?
+  recommendedCompanyPriority CompanyThermalPriority?
+  priorityPolicyVersion       String?
 
   createdAt DateTime @default(now())
 
@@ -561,6 +593,8 @@ model Alert {
   peakTemperatureC  Float?
   peakDeltaTC       Float?
   escalatedAt       DateTime?
+  companyPriority      CompanyThermalPriority?
+  priorityPolicyVersion String?
 
   equipment       Equipment?       @relation(fields: [equipmentId], references: [id])
   prediction      Prediction       @relation(fields: [predictionId], references: [id])
@@ -712,6 +746,7 @@ model ThermalPoint {
   incidents         ThermalIncident[]
   inferenceRequests InferenceRequest[]
   workOrders        WorkOrder[]
+  inspectionFindings ThermalInspectionFinding[]
 
   @@index([componentId])
   @@map("thermal_points")
@@ -736,11 +771,17 @@ model SensorDevice {
   installedAt     DateTime?
   disabledAt      DateTime?
   apiKeyHash      String
+  credentialVersion Int          @default(1)
+  credentialRotatedAt DateTime?
+  lastAuthFailureAt DateTime?
+  consecutiveAuthFailures Int    @default(0)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
   thermalPoint ThermalPoint     @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
   readings     ThermalReading[]
+  telemetryRequests DeviceTelemetryRequest[]
+  technicalAlerts   DeviceTechnicalAlert[]
 
   @@index([thermalPointId])
   @@index([status, lastSeenAt])
@@ -780,6 +821,7 @@ model ThermalReading {
   thermogram        Thermogram?
   predictions       Prediction[]
   inferenceRequests InferenceRequest[]
+  inspectionFindings ThermalInspectionFinding[]
 
   @@unique([sensorDeviceId, sequence])
   @@index([thermalPointId, measuredAt])
@@ -842,6 +884,9 @@ model ThermalIncident {
   humanReviewDecision HumanReviewDecision?
   reviewedAt          DateTime?
   reviewedById        String?
+  recommendedCompanyPriority CompanyThermalPriority?
+  finalCompanyPriority       CompanyThermalPriority?
+  priorityPolicyVersion      String?
 
   thermalPoint      ThermalPoint  @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
   workOrder         WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
@@ -877,6 +922,9 @@ model HumanReview {
   previousStatus       IncidentStatus
   nextStatus           IncidentStatus
   reviewedById         String
+  recommendedCompanyPriority CompanyThermalPriority?
+  finalCompanyPriority       CompanyThermalPriority?
+  priorityPolicyVersion      String?
   createdAt            DateTime            @default(now())
 
   thermalIncident    ThermalIncident @relation(fields: [thermalIncidentId], references: [id], onDelete: Restrict)
@@ -909,6 +957,12 @@ model InferenceRequest {
   lastErrorCode      String?
   lastErrorMessage   String?
   predictionId       String?                @unique
+  availableAt        DateTime               @default(now())
+  lockedAt           DateTime?
+  leaseExpiresAt     DateTime?
+  lockToken          String?
+  completedAt        DateTime?
+  recoveryCount      Int                    @default(0)
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
 
@@ -916,9 +970,117 @@ model InferenceRequest {
   thermalPoint   ThermalPoint   @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
   prediction     Prediction?    @relation(fields: [predictionId], references: [id], onDelete: SetNull)
 
-  @@index([status])
+  @@index([status, availableAt])
   @@index([thermalPointId, status])
   @@map("inference_requests")
+}
+
+// Política versionada que mantém a escala empresarial separada do risco da
+// IA. A versão inicial é explicitamente DEMO_DRAFT: somente P5/P10/P20 têm
+// significados fornecidos pelo desafio; os demais níveis não são inventados.
+model ThermalPriorityPolicy {
+  id              String                      @id @default(uuid())
+  version         String                      @unique
+  status          ThermalPriorityPolicyStatus @default(DEMO_DRAFT)
+  definitions     Json
+  riskMapping     Json
+  validatedLevels CompanyThermalPriority[]
+  notes           String?
+  validatedAt     DateTime?
+  validatedById   String?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  @@index([status])
+  @@map("thermal_priority_policies")
+}
+
+// Inspeção e achados históricos são append-only no service. A coluna
+// immutable reforça a intenção, enquanto permissões e testes impedem update/
+// delete no fluxo da aplicação.
+model ThermalInspection {
+  id              String   @id @default(uuid())
+  sourceReference String   @unique
+  inspectedAt     DateTime
+  technicianName  String?
+  notes           String?
+  immutable       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  findings ThermalInspectionFinding[]
+
+  @@index([inspectedAt])
+  @@map("thermal_inspections")
+}
+
+model ThermalInspectionFinding {
+  id                   String                 @id @default(uuid())
+  inspectionId         String
+  thermalPointId       String
+  thermalReadingId     String?
+  sourcePriorityLabel  String
+  companyPriority      CompanyThermalPriority
+  temperatureMaxC      Float?
+  referenceTemperatureC Float?
+  deltaTC              Float?
+  recommendation       String?
+  observedCause        ThermalCause?
+  // Referência documental do termograma de origem. O objeto privado e seus
+  // metadados completos entram na Etapa 10; esta coluna já preserva o vínculo
+  // informado pela inspeção sem confundir ausência do arquivo com ausência do achado.
+  thermogramReference  String?
+  historicalBaseline   Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+
+  inspection    ThermalInspection @relation(fields: [inspectionId], references: [id], onDelete: Restrict)
+  thermalPoint  ThermalPoint      @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
+  thermalReading ThermalReading?  @relation(fields: [thermalReadingId], references: [id], onDelete: SetNull)
+
+  @@unique([inspectionId, thermalPointId])
+  @@index([thermalPointId, createdAt])
+  @@index([companyPriority])
+  @@map("thermal_inspection_findings")
+}
+
+// Auditoria sem armazenar chave ou IP em texto puro. identifierHash permite
+// rate limiting mesmo quando a identificação/credencial é inválida.
+model DeviceTelemetryRequest {
+  id                   String   @id @default(uuid())
+  sensorDeviceId       String?
+  identifierHash       String
+  outcome              String
+  reasonCode           String?
+  itemCount            Int      @default(0)
+  acceptedCount        Int      @default(0)
+  duplicateCount       Int      @default(0)
+  rejectedCount        Int      @default(0)
+  createdAt            DateTime @default(now())
+
+  sensorDevice SensorDevice? @relation(fields: [sensorDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([identifierHash, createdAt])
+  @@index([sensorDeviceId, createdAt])
+  @@index([createdAt])
+  @@map("device_telemetry_requests")
+}
+
+model DeviceTechnicalAlert {
+  id             String                     @id @default(uuid())
+  sensorDeviceId String
+  type           DeviceTechnicalAlertType
+  status         DeviceTechnicalAlertStatus @default(OPEN)
+  openedAt       DateTime                   @default(now())
+  lastObservedAt DateTime                   @default(now())
+  resolvedAt     DateTime?
+  details        Json?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  sensorDevice SensorDevice @relation(fields: [sensorDeviceId], references: [id], onDelete: Restrict)
+
+  @@index([sensorDeviceId, status])
+  @@index([status, type])
+  @@map("device_technical_alerts")
 }
 
 // ---------------------------------------------------------------------------

@@ -29,6 +29,7 @@ function evidence() {
 function incident() {
   return { id: incidentId, thermalPointId: "point", triggerPredictionId: predictionId, triggerPrediction: evidence(),
     status: "HUMAN_CONFIRMED", humanReviewDecision: "CONFIRMED", workOrderId: null, severity: "CRITICAL", updatedAt: new Date("2026-09-08T12:00:00Z"),
+    recommendedCompanyPriority: "P20", finalCompanyPriority: "P20", priorityPolicyVersion: "gpms-demo-2026.09-v1-draft",
     thermalPoint: { code: "TP-039", component: { panel: { equipmentId: "real-equipment" } } } };
 }
 
@@ -47,7 +48,7 @@ beforeEach(() => {
 
 describe("revisão humana — gates no servidor", () => {
   it.each(["CONFIRMED", "REJECTED", "INCONCLUSIVE", "NEW_READING_REQUIRED"])("registra %s e a Prediction efetivamente revisada", async (decision) => {
-    await humanReviewService.submit({ thermalIncidentId: incidentId, expectedPredictionId: predictionId, decision, justification: "Evidência analisada pelo profissional" }, "reviewer");
+    await humanReviewService.submit({ thermalIncidentId: incidentId, expectedPredictionId: predictionId, decision, finalCompanyPriority: "P20", justification: "Evidência analisada pelo profissional" }, "reviewer");
     expect(mocks.tx.humanReview.create).toHaveBeenCalledWith({ data: expect.objectContaining({ reviewedPredictionId: predictionId, decision, reviewedById: "reviewer", justification: "Evidência analisada pelo profissional" }) });
   });
   it("não registra rejeição sem justificativa", async () => {
@@ -56,28 +57,28 @@ describe("revisão humana — gates no servidor", () => {
   });
   it("rejeita incidente cuja evidência de origem está incompleta", async () => {
     mocks.prisma.thermalIncident.findUnique.mockResolvedValue({ ...incident(), triggerPrediction: { ...evidence(), modelChecksum: null } });
-    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED" }, "reviewer")).rejects.toThrow("Prediction de origem");
+    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED", finalCompanyPriority: "P20" }, "reviewer")).rejects.toThrow("Prediction de origem");
     expect(mocks.tx.humanReview.create).not.toHaveBeenCalled();
   });
   it.each(["AI_CORE_UNAVAILABLE", "DEGRADED"])("permite revisão histórica com %s, sem produzir nova inferência ou OS", async (status) => {
     mocks.state.mockResolvedValue({ status });
-    await humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED" }, "reviewer");
+    await humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED", finalCompanyPriority: "P20" }, "reviewer");
     expect(mocks.tx.humanReview.create).toHaveBeenCalled();
     expect(mocks.tx.workOrder.create).not.toHaveBeenCalled();
     expect(mocks.state).not.toHaveBeenCalled();
   });
   it("não confirma silenciosamente uma inferência diferente da exibida", async () => {
-    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED", expectedPredictionId: incidentId }, "reviewer")).rejects.toThrow("nova inferência");
+    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED", finalCompanyPriority: "P20", expectedPredictionId: incidentId }, "reviewer")).rejects.toThrow("nova inferência");
     expect(mocks.tx.humanReview.create).not.toHaveBeenCalled();
   });
   it("detecta mudança do incidente durante a submissão", async () => {
     mocks.tx.thermalIncident.findUnique.mockResolvedValue({ ...incident(), status: "WORK_ORDER_CREATED", workOrderId: "order" });
-    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED" }, "reviewer")).rejects.toThrow("atualizado");
+    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED", finalCompanyPriority: "P20" }, "reviewer")).rejects.toThrow("atualizado");
     expect(mocks.tx.humanReview.create).not.toHaveBeenCalled();
   });
   it("detecta mudança da inferência dentro da transação", async () => {
     mocks.tx.prediction.findFirst.mockResolvedValue({ id: "new-prediction" });
-    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED" }, "reviewer")).rejects.toThrow("nova inferência");
+    await expect(humanReviewService.submit({ thermalIncidentId: incidentId, decision: "CONFIRMED", finalCompanyPriority: "P20" }, "reviewer")).rejects.toThrow("nova inferência");
     expect(mocks.tx.humanReview.create).not.toHaveBeenCalled();
   });
 });

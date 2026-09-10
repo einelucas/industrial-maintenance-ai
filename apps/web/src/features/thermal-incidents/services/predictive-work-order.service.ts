@@ -40,6 +40,9 @@ export const predictiveWorkOrderService = {
     if (incident.workOrderId) {
       throw new ConflictError("Este incidente já possui uma ordem de serviço vinculada.");
     }
+    if (!incident.finalCompanyPriority || !incident.priorityPolicyVersion) {
+      throw new ValidationError("Confirme a prioridade empresarial e a política aplicada antes de criar a OS preditiva.");
+    }
     if (!incident.triggerPrediction || !isTraceablePrediction(incident.triggerPrediction)) {
       throw new ValidationError("Incidente sem Prediction de origem — não é possível criar OS preditiva.");
     }
@@ -86,6 +89,8 @@ export const predictiveWorkOrderService = {
           createdBy: { connect: { id: createdById } },
           sourcePrediction: { connect: { id: prediction.id } },
           thermalPoint: { connect: { id: incident.thermalPointId } },
+          companyPriority: incident.finalCompanyPriority,
+          priorityPolicyVersion: incident.priorityPolicyVersion,
           ...(input.assignedUserId ? { assignedUser: { connect: { id: input.assignedUserId } } } : {}),
         },
       });

@@ -1,5 +1,6 @@
 import { maintenancePlanService } from "@/features/maintenance-plans/services/maintenance-plan.service";
-import { thermalBackfillService } from "@/features/ai-core/services/thermal-backfill.service";
+import { thermalAnalysisWorkerService } from "@/features/ai-core/services/thermal-analysis-worker.service";
+import { telemetryRetentionService } from "@/features/telemetry/services/telemetry-retention.service";
 
 type JobStatus = "SUCCEEDED" | "BLOCKED" | "FAILED";
 
@@ -14,7 +15,8 @@ export interface DailyAutomationReport {
   };
   thermal: {
     status: JobStatus;
-    report?: Awaited<ReturnType<typeof thermalBackfillService.run>>;
+    report?: Awaited<ReturnType<typeof thermalAnalysisWorkerService.reconcileAndRun>>;
+    auditRetention?: Awaited<ReturnType<typeof telemetryRetentionService.purgeExpiredRequestAudits>>;
     error?: string;
   };
 }
@@ -39,11 +41,15 @@ export async function runDailyAutomation(): Promise<DailyAutomationReport> {
   }
 
   try {
-    const report = await thermalBackfillService.run({ dryRun: false });
+    const [report, auditRetention] = await Promise.all([
+      thermalAnalysisWorkerService.reconcileAndRun({ maxJobs: 100, concurrency: 8, timeBudgetMs: 50_000 }),
+      telemetryRetentionService.purgeExpiredRequestAudits(),
+    ]);
     thermal = {
-      status: report.stoppedReason ? "BLOCKED" : "SUCCEEDED",
+      status: report.worker.stoppedReason ? "BLOCKED" : "SUCCEEDED",
       report,
-      ...(report.stoppedReason ? { error: report.stoppedReason } : {}),
+      auditRetention,
+      ...(report.worker.stoppedReason ? { error: report.worker.stoppedReason } : {}),
     };
   } catch (error) {
     thermal = { status: "FAILED", error: safeMessage(error) };

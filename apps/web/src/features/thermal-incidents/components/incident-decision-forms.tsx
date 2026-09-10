@@ -8,6 +8,7 @@ import { REVIEW_LABELS } from "@/features/thermal-incidents/services/incident-pr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { COMPANY_PRIORITY_LABELS } from "@/features/thermal-priority/constants";
 
 function ReviewButtons() {
   const { pending } = useFormStatus();
@@ -19,17 +20,17 @@ function CreateOrderButton() {
   return <Button type="submit" disabled={pending}>{pending ? "Criando OS…" : "Autorizar e criar OS preditiva"}</Button>;
 }
 
-export function HumanReviewForm({ incidentId, predictionId, blockedReason }: { incidentId: string; predictionId: string; blockedReason: string | null }) {
+export function HumanReviewForm({ incidentId, predictionId, recommendedPriority, policyVersion, blockedReason }: { incidentId: string; predictionId: string; recommendedPriority: keyof typeof COMPANY_PRIORITY_LABELS | null; policyVersion: string | null; blockedReason: string | null }) {
   const [state, action] = useFormState(submitHumanReviewAction, {});
   return <form action={action} className="space-y-3">
     <input type="hidden" name="thermalIncidentId" value={incidentId} />
     <input type="hidden" name="expectedPredictionId" value={predictionId} />
     <p className="break-all text-xs text-muted-foreground">Revisando a Prediction {predictionId}. O registro identifica o profissional e preserva a evidência original.</p>
-    <fieldset disabled={!!blockedReason} className="space-y-3"><Label htmlFor="justification">Justificativa da decisão</Label><textarea id="justification" name="justification" maxLength={2000} rows={4} aria-describedby="justification-help" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+    <fieldset disabled={!!blockedReason} className="space-y-3"><Label htmlFor="finalCompanyPriority">Prioridade empresarial confirmada</Label><select id="finalCompanyPriority" name="finalCompanyPriority" defaultValue={recommendedPriority ?? ""} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Selecione ao confirmar</option>{Object.entries(COMPANY_PRIORITY_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><p className="text-xs text-muted-foreground">Recomendação da política: {recommendedPriority ? COMPANY_PRIORITY_LABELS[recommendedPriority] : "indisponível"}{policyVersion ? ` · versão ${policyVersion}` : ""}. P30/P50/P100 aguardam definição oficial.</p><Label htmlFor="justification">Justificativa da decisão</Label><textarea id="justification" name="justification" maxLength={2000} rows={4} aria-describedby="justification-help" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
       <p id="justification-help" className="text-xs text-muted-foreground">Obrigatória para rejeitar, declarar inconclusivo ou solicitar nova leitura; até 2.000 caracteres.</p><ReviewButtons /></fieldset>
     {blockedReason && <p className="text-sm text-muted-foreground">{blockedReason}</p>}
     {state.error && <p role="alert" className="text-sm text-destructive">{state.error}</p>}
-    {state.success && <p role="status" className="text-sm">Revisão registrada no histórico.</p>}
+    {state.success && <p role="status" className="text-sm">Revisão, prioridade e política registradas no histórico.</p>}
   </form>;
 }
 

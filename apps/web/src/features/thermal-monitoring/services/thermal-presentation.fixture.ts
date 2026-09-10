@@ -9,10 +9,10 @@ export function predictionFixture(overrides: Partial<TraceablePrediction> = {}):
     trendCPerHour: 3, timeAboveLimitMin: 45, explanations: ["Tendência temporal persistente"], recommendedAction: "Inspecionar conexão",
     predictionHorizonH: null, inferenceId: "inference", inferenceRequestId: "request", featureVersion: "v1",
     modelChecksum: `sha256:${"a".repeat(64)}`, predictedFailureMode: "CONTACT_RESISTANCE", failureModeConfidence: 0.8,
+    recommendedCompanyPriority: "P20", priorityPolicyVersion: "test-policy-v1",
     createdAt: new Date("2026-09-08T12:00:00Z"),
     thermalReading: { id: "reading", thermalPointId: "point", measuredAt: new Date("2026-09-08T11:59:00Z"), source: "SIMULATOR", analysisStatus: "ANALYZED" },
     inferenceRequest: { inferenceRequestId: "request", status: "SUCCEEDED", predictionId: "prediction", thermalReadingId: "reading", thermalPointId: "point", featureVersion: "v1" },
     ...overrides,
   };
 }
-

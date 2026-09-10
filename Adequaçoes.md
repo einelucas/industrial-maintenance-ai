@@ -8,7 +8,9 @@
 >
 > Revisão de arquitetura AI-first: 03/09/2026.
 >
-> Estado informado pelo projeto em 09/09/2026: **Etapas 1–8 encerradas no escopo necessário para iniciar a Etapa 9**. A interface foi validada em produção desktop com evidências fornecidas pelo usuário; o cenário atual dos 55 pontos percorreu ingestão e inferência reais; e o contrato passou a separar probabilidade supervisionada, score ML e risco operacional. E2E versionado, mobile/teclado, carga e piloto continuam corretamente nas Etapas 9–12.
+> Estado informado pelo projeto em 09/09/2026: **Etapas 1–9 implementadas e validadas; a próxima entrega é a Etapa 10**. A Etapa 9 adicionou a inspeção histórica imutável 2/10/7, prioridade empresarial P5–P100 separada do risco, telemetria autenticada/idempotente, fila PostgreSQL com lease e consumidor Vercel Queues. P30/P50/P100 continuam deliberadamente sem significado inventado até validação da empresa; o soak do deploy e o piloto real permanecem nas Etapas 11–12.
+>
+> **Revisão contratual de aderência ao desafio — 09/09/2026:** este documento passa a exigir, para a solução final, compatibilidade explícita com a escala empresarial `P5`–`P100`, registro imutável da inspeção original (2 “Prioridade 3/P20”, 10 “Prioridade 4/P10” e 7 “Prioridade 5/P5”), evidência por termograma vinculada ao TAG, telemetria contínua segura, implantação sem interrupção não planejada e validação com dados reais. Quando uma anotação histórica anterior conflitar com esta revisão ou com as Etapas 9–12 atualizadas, prevalece esta revisão. As Etapas 1–8 continuam concluídas; os novos requisitos começam na Etapa 9 e não podem ser declarados prontos por simulação apenas.
 
 ---
 
@@ -58,15 +60,16 @@ Regras determinísticas continuam permitidas apenas para validação de entrada,
 
 ### Próxima ação recomendada
 
-**Atualização de 08/09/2026:** a implementação da interface da Etapa 6 já foi iniciada e está em validação. O próximo trabalho é validar as telas em navegador e, após a Etapa 8, o fluxo com o modelo real. Consulte o registro e as pendências da Etapa 6 abaixo; a descrição seguinte preserva o contexto da transição a partir da Etapa 5.
+Prosseguir pela **Etapa 10 — termogramas, relatórios e feedback**. A Etapa 9 encerrou a compatibilidade estrutural P5–P100, a inspeção original auditável e o canal contínuo autenticado. O próximo incremento deverá armazenar a imagem térmica privada e completar a linha do tempo auditável por TAG.
 
-Prosseguir pela **Etapa 6 — Interface operacional termográfica**, pois as Etapas 1 a 5 já estão prontas: domínio, simulação persistida (55 pontos, 6.600 leituras, caso crítico `TP-039` íntegro), backend administrativo, entrada de leituras e agora também a cadeia estrutural completa `Reading -> IA -> Prediction -> Incident -> HumanReview -> WorkOrder`, com gateway fail-closed, features temporais rastreáveis e revisão humana auditável — tudo comprovado por teste de integração de ponta a ponta em banco isolado. **A Etapa 6 constrói a interface sobre essa estrutura, mas as telas analíticas devem continuar exibindo `PENDING_AI`/`AI_CORE_UNAVAILABLE`** até a Etapa 8 integrar o modelo termográfico real — não há nenhuma predição real para mostrar ainda.
+As Etapas 1–9 já entregam a demonstração sintética AI-first, a inspeção histórica 2/10/7, a escala P5–P100 sem definições inventadas e o canal contínuo com fila durável. Isso comprova o fluxo de software e o contrato de telemetria, mas ainda **não** comprova segurança da instalação física, eficácia industrial, termogramas privados completos ou desempenho sustentado no deployment.
 
 ### O que não deve ser feito agora
 
 - não executar `prisma migrate reset`;
 - não apagar o dataset AI4I ou o modelo antigo antes de criar uma tag/backup;
-- não tentar integrar MQTT, ESP32 ou câmera térmica;
+- não escolher MQTT, ESP32, câmera ou fabricante antes de congelar o contrato HTTP/lote independente de hardware e os requisitos de instalação da planta;
+- não transformar MQTT, visão computacional avançada, notificação externa ou um fabricante específico em requisito obrigatório sem evidência de que o desafio precisa disso;
 - não atualizar todos os dashboards de uma vez;
 - não reutilizar as métricas de 99,3% de ROC-AUC e 93,3% de recall como métricas do novo problema;
 - não criar um novo modelo a partir das colunas antigas de vibração, torque e RPM;
@@ -90,10 +93,10 @@ Prosseguir pela **Etapa 6 — Interface operacional termográfica**, pois as Eta
 |     6 | Interface operacional dependente da IA     | Dashboard, evidências e decisão humana               | Etapa 5     | Concluída no escopo pré-Etapa 9 |
 |     7 | Dataset sintético temporal                 | Dados reproduzíveis para treino                        | Etapas 1–5  | Concluída |
 |     8 | Treinamento e FastAPI obrigatório          | Modelo termográfico integrado, sem fallback funcional | Etapa 7     | Concluída |
-|     9 | Dispositivos e telemetria                  | Ingestão contínua segura e fila para a IA             | Etapa 8     | Pendente    |
-|    10 | Relatórios e feedback                      | Evidência, decisão humana e aprendizado operacional  | Etapas 6–9  | Pendente    |
+|     9 | Processo empresarial e telemetria          | P5–P100, inspeção original e ingestão contínua segura | Etapa 8     | Concluída   |
+|    10 | Termogramas, relatórios e feedback          | Evidência por imagem/TAG, decisão humana e resultado | Etapas 6–9  | Pendente    |
 |    11 | Qualidade e demonstração                   | MVP estabilizado e teste de remoção da IA             | Etapas 0–10 | Parcial: pré-voo/deploy pronto |
-|    12 | Piloto e dados reais                       | Validação na planta e evolução do modelo       | Etapa 11    | Pendente    |
+|    12 | Piloto industrial e dados reais            | Instalação segura sem parada, validação e expansão    | Etapa 11    | Pendente    |
 
 ### Caminho crítico
 
@@ -108,10 +111,11 @@ Base protegida
   -> Dataset sintético
   -> Modelo/FastAPI
   -> validação humana do defeito
-  -> Telemetria
-  -> Relatórios
+  -> escala P5–P100 e inspeção original auditável
+  -> Telemetria contínua segura
+  -> Termogramas, relatórios e feedback
   -> Validação final
-  -> Piloto real
+  -> Piloto real sem interrupção não planejada
 ```
 
 ---
@@ -1247,7 +1251,7 @@ Execução de 09/09/2026 do prompt `docs/prompts/prontidao-demonstracao-e-deploy
 
 ### Objetivo
 
-Substituir a dependência de registros manuais por um canal seguro e idempotente de dados contínuos, mantendo manual/CSV somente como formas alternativas de entrada. Independentemente da origem, toda interpretação deverá passar pelo mesmo modelo de IA.
+Compatibilizar primeiro o domínio com o processo de inspeção da empresa e, em seguida, substituir a dependência de registros manuais por um canal seguro e idempotente de dados contínuos. Manual, CSV e termograma continuam como origens válidas de inspeção; independentemente da origem, toda interpretação atual deverá passar pelo mesmo modelo de IA.
 
 ### Dependências
 
@@ -1256,71 +1260,98 @@ Substituir a dependência de registros manuais por um canal seguro e idempotente
 
 ### Tarefas em ordem
 
+#### 9.0. Escala empresarial e inspeção original — concluída em 09/09/2026
+
+- [x] Criar enum próprio `CompanyThermalPriority` com `P5`, `P10`, `P20`, `P30`, `P50` e `P100`.
+- [x] Não substituir `RiskLevel` da IA: risco atual (`LOW`/`MODERATE`/`HIGH`/`CRITICAL`), prioridade empresarial e prioridade da OS são conceitos distintos.
+- [x] Criar `ThermalInspection` e `ThermalInspectionFinding`, ou estrutura equivalente, para registrar data, origem, responsável, ponto/TAG, leitura, referência documental do termograma, rótulo original da inspeção, prioridade empresarial, recomendação e observação. O objeto privado do termograma permanece corretamente na Etapa 10.
+- [x] Tornar o registro da inspeção original imutável/auditável; `initiallyAnomalous` poderá permanecer apenas como campo legado derivado, nunca como única evidência.
+- [x] Registrar no cenário reservado exatamente 2 achados “Prioridade 3 (P20)”, 10 “Prioridade 4 (P10)” e 7 “Prioridade 5 (P5)”; o `TP-039` pertence ao grupo P20 e o segundo P20 está explicitamente marcado como mapeamento demonstrativo pendente da fonte oficial.
+- [x] Exibir lado a lado **prioridade histórica da inspeção**, **risco atual da IA** e **prioridade final escolhida pelo humano**.
+- [x] Criar política versionada de conversão entre risco/evidência e prioridade empresarial; `P30`, `P50` e `P100` existem, mas ficam sem prazo/ação até validação formal da empresa.
+- [x] Copiar a prioridade empresarial confirmada e a versão da política para o incidente, revisão, alerta, OS e relatório da OS, preservando o valor usado na decisão.
+- [x] Testar a distribuição `2/10/7`, a separação semântica e a impossibilidade de o frontend usar a prioridade histórica como risco atual.
+
 #### 9.1. Contrato de telemetria
 
-- [ ] Criar `POST /api/v1/telemetry/thermal-readings`.
-- [ ] Aceitar lote.
-- [ ] Definir limite de itens e payload.
-- [ ] Validar timestamps.
-- [ ] Validar `thermalPointCode` autorizado.
-- [ ] Responder por item.
-- [ ] Enfileirar cada leitura aceita para processamento pelo núcleo de IA.
-- [ ] Nunca retornar risco ou severidade calculados pela rota de ingestão.
+- [x] Criar `POST /api/v1/telemetry/thermal-readings`.
+- [x] Aceitar lote.
+- [x] Definir limite de itens e payload.
+- [x] Validar timestamps.
+- [x] Validar `thermalPointCode` autorizado.
+- [x] Responder por item.
+- [x] Enfileirar cada leitura aceita para processamento pelo núcleo de IA.
+- [x] Confirmar recebimento rapidamente e processar por fila durável: PostgreSQL é a fonte de verdade e um gatilho idempotente do Vercel Queues acorda o consumidor separado.
+- [x] Nunca retornar risco ou severidade calculados pela rota de ingestão.
 
 #### 9.2. Segurança de dispositivo
 
-- [ ] Autenticação própria, separada de Auth.js.
-- [ ] Chave individual.
-- [ ] Hash no banco.
-- [ ] Rotação e revogação.
-- [ ] Rate limiting.
-- [ ] Proteção contra replay.
-- [ ] Auditoria de falhas.
+- [x] Autenticação própria, separada de Auth.js.
+- [x] Chave individual.
+- [x] Hash no banco.
+- [x] Rotação e revogação.
+- [x] Rate limiting.
+- [x] Proteção contra replay.
+- [x] Auditoria de falhas.
 
 #### 9.3. Idempotência e reconexão
 
-- [ ] Usar `deviceId + sequence`.
-- [ ] Aceitar lote atrasado.
-- [ ] Não duplicar leitura.
-- [ ] Não reenviar notificações históricas por padrão.
-- [ ] Atualizar `lastSeenAt` com leitura válida.
+- [x] Usar `deviceId + sequence`.
+- [x] Aceitar lote atrasado.
+- [x] Não duplicar leitura.
+- [x] Não reenviar notificações históricas por padrão; a Etapa 9 registra apenas alerta interno consolidado e não possui envio externo.
+- [x] Atualizar `lastSeenAt` com leitura válida.
 
 #### 9.4. Estado do sensor
 
-- [ ] Online.
-- [ ] Offline.
-- [ ] Degradado.
-- [ ] Em manutenção.
-- [ ] Desabilitado.
-- [ ] Gerar alerta técnico após persistência.
-- [ ] Nunca representar ausência de leitura como normalidade.
+- [x] Online.
+- [x] Offline.
+- [x] Degradado.
+- [x] Em manutenção.
+- [x] Desabilitado.
+- [x] Gerar alerta técnico após persistência.
+- [x] Nunca representar ausência de leitura como normalidade.
 
 #### 9.5. Gateway de demonstração
 
-- [ ] Criar simulador externo de dispositivo.
-- [ ] Enviar sequência contínua.
-- [ ] Simular perda de rede e buffer.
-- [ ] Simular reconexão em lote.
-- [ ] Simular pico crítico.
-- [ ] Documentar contrato para ESP32/gateway industrial futuro.
+- [x] Criar simulador externo de dispositivo.
+- [x] Enviar sequência contínua.
+- [x] Simular perda de rede e buffer.
+- [x] Simular reconexão em lote.
+- [x] Simular pico crítico.
+- [x] Documentar contrato independente de fabricante para gateway industrial futuro; ESP32, MQTT ou câmera específica permanecem opções de implementação, não requisitos do desafio.
 
 #### 9.6. Escalabilidade inicial
 
-- [ ] Testar 55 leituras/minuto.
-- [ ] Testar 79.200 leituras/dia simuladas.
-- [ ] Medir latência.
-- [ ] Evitar uma chamada FastAPI síncrona por item quando houver lote grande.
-- [ ] Avaliar fila/worker somente se necessário.
-- [ ] Garantir que o worker use o mesmo contrato, modelo e validação de proveniência do fluxo individual.
+- [x] Testar 55 leituras/minuto.
+- [x] Testar 79.200 leituras/dia simuladas.
+- [x] Medir latência de validação/serialização por lote; o soak de latência ponta a ponta do deployment permanece na Etapa 11.
+- [x] Evitar uma chamada FastAPI síncrona por item no recebimento de lote: a rota publica um gatilho e o consumidor processa com concorrência limitada.
+- [x] Implementar fila/worker durável: fila PostgreSQL com lease/`SKIP LOCKED` mais consumidor Vercel Queues; o cron diário ficou apenas para reconciliação, retenção e recuperação.
+- [x] Dimensionar o consumidor acima da entrada nominal e expor métricas de backlog; a confirmação sustentada em produção será executada no soak da Etapa 11.
+- [x] Definir retentativa automática com backoff e fila de erro recuperável para `AI_FAILED`, sem fabricar resultado e sem exigir correção manual linha a linha.
+- [x] Garantir que o worker use o mesmo contrato, modelo e validação de proveniência do fluxo individual.
 
 ### Critério de saída
 
-- [ ] Gateway simulado envia dados continuamente.
-- [ ] Duplicatas são ignoradas.
-- [ ] Queda e retorno de rede não perdem dados.
-- [ ] Sensor offline é identificado.
-- [ ] Todas as leituras aceitas ficam `PENDING_AI`, `ANALYZED` ou `AI_FAILED`, sem classificação alternativa.
-- [ ] O dashboard reflete telemetria sem recarregar conjuntos excessivos.
+- [x] A inspeção original mostra exatamente 19 achados: `2 × P20`, `10 × P10` e `7 × P5`, separada do estado atual da IA.
+- [x] A aplicação reconhece toda a escala `P5`–`P100` sem inventar o significado empresarial dos níveis ainda não documentados.
+- [x] Gateway simulado envia dados continuamente.
+- [x] Duplicatas são ignoradas.
+- [x] Queda e retorno de rede preservam dados no buffer e o reenvio é idempotente.
+- [x] Sensor offline é identificado.
+- [x] Todas as leituras aceitas ficam `PENDING_AI`, `ANALYZED` ou `AI_FAILED`, sem classificação alternativa.
+- [x] A fila foi dimensionada para 55 leituras/minuto e o contrato de 79.200/dia foi exercitado; falhas possuem retentativa e diagnóstico auditável. O soak no deployment continua como aceitação da Etapa 11.
+- [x] O dashboard reflete telemetria com consultas limitadas e atualização automática a cada 60 segundos.
+
+### Evidências de encerramento da Etapa 9 — 09/09/2026
+
+- migrações aditivas aplicadas no Neon, sem reset: prioridade, inspeção/achados, credenciais, fila, auditoria, alertas técnicos e índices de retenção;
+- verificação do banco: 19 achados imutáveis, distribuição `P5=7`, `P10=10`, `P20=2` e `TP-039 = Prioridade 3/P20`;
+- teste de capacidade: 55 pontos, 79.200 leituras/dia, 825 envelopes, maior payload de 25.056 bytes e p95 local final de validação/serialização de 0,201 ms;
+- teste PostgreSQL real: autenticação individual, persistência atômica `ThermalReading + InferenceRequest`, reenvio idempotente e lote atrasado/autorização por ponto;
+- suíte completa: 353 testes unitários/contratuais aprovados, 3 testes PostgreSQL da Etapa 9 aprovados, lint/typecheck e build Next.js de produção aprovados;
+- `@vercel/queue` e consumidor `thermal-analysis` configurados no serviço web; nenhuma credencial manual de fila é adicionada ao `.env`.
 
 ### Commits sugeridos
 
@@ -1336,13 +1367,22 @@ test(load): validate 55-point telemetry volume
 
 ### Objetivo
 
-Fechar o ciclo de manutenção e preparar dados úteis para o futuro treinamento com dados reais.
+Cruzar inspeção, termograma, TAG, histórico, inferência, prioridade empresarial, decisão humana e manutenção; fechar o ciclo operacional e preparar dados úteis para futuro treinamento com dados reais.
 
 ### Dependências
 
 - Etapas 6–9 concluídas.
 
 ### Tarefas em ordem
+
+#### 10.0. Evidência por termograma e histórico de inspeções — requisito do desafio
+
+- [ ] Implementar upload/ingestão do arquivo termográfico para leitura manual, CSV enriquecido ou câmera/gateway compatível.
+- [ ] Armazenar o arquivo em storage privado; o banco guarda chave interna, MIME validado, dimensões, temperaturas, ROI, captura, autor/dispositivo e checksum.
+- [ ] Validar tipo real e tamanho, impedir execução de conteúdo e aplicar autorização no download/visualização.
+- [ ] Vincular cada termograma a `ThermalInspectionFinding`, `ThermalReading`, `ThermalPoint` e, por consequência, ao TAG/painel/equipamento.
+- [ ] Exibir imagem, ROI/metadados, leitura numérica, histórico de recomendações e Prediction correspondente na mesma linha do tempo.
+- [ ] Não exigir visão computacional avançada no primeiro piloto: a IA temporal pode consumir as medições extraídas pela câmera; análise de pixels só entra mediante dataset e aceite próprios.
 
 #### 10.1. Relatórios
 
@@ -1354,6 +1394,7 @@ Fechar o ciclo de manutenção e preparar dados úteis para o futuro treinamento
 - [ ] Marca visível de dados sintéticos.
 - [ ] Versão/checksum do modelo e `inferenceId` das análises relevantes.
 - [ ] Separação entre diagnóstico sugerido pela IA e decisão registrada pelo humano.
+- [ ] Mostrar prioridade histórica P5–P100, prioridade recomendada atual, prioridade final e política/versionamento usados.
 
 #### 10.2. Diagnóstico técnico
 
@@ -1364,6 +1405,7 @@ Fechar o ciclo de manutenção e preparar dados úteis para o futuro treinamento
 - [ ] Registrar componente afetado.
 - [ ] Registrar temperatura pós-ação.
 - [ ] Validar que a OS pertence ao mesmo equipamento/ponto.
+- [ ] Exigir prioridade empresarial final e justificativa quando o humano divergir da recomendação versionada.
 
 #### 10.3. Monitoramento pós-ação
 
@@ -1384,11 +1426,12 @@ Fechar o ciclo de manutenção e preparar dados úteis para o futuro treinamento
 
 ### Critério de saída
 
-- [ ] Um incidente possui evidência completa.
+- [ ] Um incidente possui evidência completa, incluindo TAG, inspeção/leitura e termograma quando a origem dispuser de imagem.
 - [ ] A OS devolve feedback ao ponto monitorado.
 - [ ] Existe comparação antes/depois.
 - [ ] O relatório reconstrói toda a linha do tempo.
 - [ ] O relatório prova a cadeia `dado -> IA -> decisão humana -> manutenção`.
+- [ ] O relatório reconstrói a classificação P5–P100 usada na priorização e não a confunde com score/risco da IA.
 - [ ] Dados futuros podem ser rotulados sem acesso direto do Python ao banco operacional.
 
 ### Commits sugeridos
@@ -1425,6 +1468,9 @@ Estabilizar o MVP para apresentação e uso piloto. Esta etapa não deve introdu
 - [ ] Teste de tentativa de bypass da IA.
 - [ ] Teste de ausência de dados hardcoded/mocks no build demonstrativo.
 - [ ] Teste de reconexão do gateway.
+- [ ] Teste da escala `P5`–`P100`, distribuição histórica `2/10/7` e separação entre prioridade histórica, risco atual e prioridade final.
+- [ ] Teste de upload, autorização, checksum e vínculo do termograma com TAG/leitura/incidente.
+- [ ] Teste de fila durável e recuperação de `AI_FAILED`, comprovando que não há worker fantasma após o fim da requisição.
 
 #### 11.2. Segurança
 
@@ -1448,19 +1494,21 @@ Estabilizar o MVP para apresentação e uso piloto. Esta etapa não deve introdu
 
 #### 11.4. Limpeza de legado
 
-- [ ] Remover rotas e campos mecânicos não utilizados.
-- [ ] Remover referências ativas ao dataset AI4I.
+- [ ] Ocultar do fluxo GPMS rotas mecânicas genéricas que desviem a demonstração; remover código somente quando não houver dependência ativa e houver teste de regressão.
+- [ ] Não investir em novos campos, telas, CSVs ou calibrações do dataset AI4I/mecânico; ele é legado e não é critério do desafio termográfico.
 - [ ] Atualizar README.
 - [ ] Atualizar arquitetura.
 - [ ] Atualizar checklist.
 - [ ] Preservar histórico apenas na tag anterior.
 - [ ] Remover `DemoPredictor`, `RULE_ONLY` operacional e variáveis de fallback.
 - [ ] Remover a opção manual de OS `PREDICTIVE`.
+- [ ] Manter planos preventivos e recursos gerais de PCM somente como apoio à execução da manutenção; não criar novas funcionalidades genéricas sem ligação direta com o desafio.
 
 #### 11.5. Roteiro de demonstração
 
 - [ ] Mostrar mapa dos 55 pontos.
 - [ ] Mostrar os 19 inicialmente anormais.
+- [ ] Mostrar a distribuição histórica `2 × P20`, `10 × P10`, `7 × P5` e explicar que ela não é o risco atual da IA.
 - [ ] Abrir ponto que evolui para 75,6 °C.
 - [ ] Exibir referência 40 °C e `deltaT 35,6 °C`.
 - [ ] Mostrar explicações.
@@ -1470,6 +1518,7 @@ Estabilizar o MVP para apresentação e uso piloto. Esta etapa não deve introdu
 - [ ] Registrar ação.
 - [ ] Mostrar normalização.
 - [ ] Emitir relatório.
+- [ ] Abrir a evidência termográfica vinculada ao TAG e ao histórico do ponto.
 - [ ] Informar que o modelo usa dados sintéticos.
 - [ ] Interromper o FastAPI/remover o modelo e demonstrar que o aplicativo bloqueia a operação em vez de usar regras ou dados prontos.
 
@@ -1482,6 +1531,8 @@ Estabilizar o MVP para apresentação e uso piloto. Esta etapa não deve introdu
 - [ ] Não existem mocks ou resultados hardcoded no ambiente demonstrativo.
 - [ ] O teste de remoção da IA comprova que o núcleo do aplicativo para.
 - [ ] O cenário completo funciona em instalação limpa.
+- [ ] A fila suporta a carga alvo sem depender do cron diário para acompanhar telemetria contínua.
+- [ ] A taxonomia P5–P100 e a evidência por termograma passam por E2E e auditoria.
 - [ ] O projeto está pronto para apresentação e piloto controlado.
 
 ### Commits sugeridos
@@ -1510,6 +1561,7 @@ Validar o sistema no ambiente industrial, começando pelos 19 pontos anormais e 
 - procedimentos NR-10;
 - conectividade e segurança de rede;
 - acesso aos dados de inspeção existentes.
+- definição oficial do significado, prazo e regra de escalonamento de `P5`, `P10`, `P20`, `P30`, `P50` e `P100`.
 
 ### Tarefas em ordem
 
@@ -1521,9 +1573,14 @@ Validar o sistema no ambiente industrial, começando pelos 19 pontos anormais e 
 - [ ] Registrar carga durante inspeções.
 - [ ] Avaliar campo de visão e posicionamento.
 - [ ] Definir responsável por responder alertas.
+- [ ] Importar ou reconciliar o relatório original, seus termogramas, TAGs, recomendações e a distribuição `2 × P20`, `10 × P10`, `7 × P5`.
 
 #### 12.2. Instrumentação controlada
 
+- [ ] Elaborar análise de risco, método de instalação, plano de trabalho, permissões e critérios de parada com responsável técnico e NR-10.
+- [ ] Planejar instalação sem interrupção não planejada; qualquer desligamento necessário deve ser autorizado e programado pela planta.
+- [ ] Definir rollback físico/lógico e comprovar que falha do sensor/software não interfere nas proteções elétricas existentes.
+- [ ] Selecionar sensores/câmeras apropriados para distância, temperatura, isolamento, ambiente e método de montagem; o software não substitui certificação do hardware.
 - [ ] Começar por poucos pontos representativos.
 - [ ] Comparar sensor contínuo com câmera de referência.
 - [ ] Calibrar emissividade e montagem.
@@ -1538,6 +1595,7 @@ Validar o sistema no ambiente industrial, começando pelos 19 pontos anormais e 
 - [ ] Ajustar thresholds.
 - [ ] Medir falsos alertas.
 - [ ] Revisar regras por tipo de componente.
+- [ ] Medir falso negativo, falso positivo, disponibilidade, atraso de ingestão e concordância com a câmera de referência por tipo de componente.
 
 #### 12.4. Retreinamento futuro
 
@@ -1547,6 +1605,7 @@ Validar o sistema no ambiente industrial, começando pelos 19 pontos anormais e 
 - [ ] Promover somente se superar critérios aprovados.
 - [ ] Manter rollback.
 - [ ] Alterar `modelStage` para `PLANT_CALIBRATION` e depois `PLANT_VALIDATED` somente com evidência.
+- [ ] Definir com a empresa critérios numéricos mínimos antes da promoção; concluir tarefas sem atingir esses critérios não torna o modelo validado.
 
 ### Indicadores do piloto
 
@@ -1559,6 +1618,10 @@ Validar o sistema no ambiente industrial, começando pelos 19 pontos anormais e 
 - reincidência;
 - concordância com termografia manual;
 - falhas detectadas antes de parada.
+- percentual de pontos cobertos continuamente, incluindo centrífugas;
+- tempo entre detecção, confirmação, criação e conclusão da OS;
+- quantidade de pontos que evoluem para prioridade superior entre inspeções;
+- interrupções não planejadas causadas pela implantação — meta obrigatória: zero.
 
 ### Critério de saída
 
@@ -1566,32 +1629,32 @@ Validar o sistema no ambiente industrial, começando pelos 19 pontos anormais e 
 - [ ] Thresholds foram revisados com dados reais.
 - [ ] O processo de resposta a alertas está definido.
 - [ ] Limitações e resultados estão documentados.
+- [ ] A implantação não causou interrupção não planejada e não alterou a função das proteções elétricas.
+- [ ] A escala P5–P100 foi validada pelo processo de manutenção e aparece de ponta a ponta.
+- [ ] Termogramas, TAGs, leituras, recomendações, inferências, decisões e OS são reconstruíveis pela auditoria.
+- [ ] Os indicadores de benefício possuem baseline, período, responsável e meta aprovada; não basta a funcionalidade existir.
 - [ ] Existe decisão técnica fundamentada sobre expansão.
 
 ---
 
-## Ordem recomendada dos primeiros commits
+## Ordem recomendada dos próximos commits — a partir da Etapa 10
 
-Para começar o trabalho sem abrir frentes demais:
+As Etapas 1–9 estão concluídas. A ordem abaixo é a sequência ativa e evita reimplementar a base já entregue:
 
-1. `chore: prepare repository for GPMS thermal adaptation`
-2. `feat(db): add thermal monitoring enums and hierarchy`
-3. `feat(db): add thermal readings devices and incidents`
-4. `test(auth): cover thermal permissions`
-5. `feat(seed): add deterministic 55-point thermal scenario`
-6. `feat(thermal-domain): add panel and point services`
-7. `feat(readings): add manual thermal reading flow`
-8. `feat(simulator): add GPMS critical thermal scenario`
-9. `feat(ai-core): enforce mandatory thermal inference contract`
-10. `feat(human-review): require confirmation before predictive work order`
+1. `feat(thermograms): add private evidence storage and TAG timeline`
+2. `feat(reports): add audited inspection prediction decision and maintenance history`
+3. `feat(feedback): record post-maintenance outcome without rewriting evidence`
+4. `test(e2e): cover telemetry to human-approved predictive work order`
+5. `test(soak): validate deployed queue throughput and backlog stability`
+6. `feat(pilot): add safe deployment controls and real-data indicators`
 
-Depois desses commits, o sistema terá a base necessária para receber telemetria e bloquear corretamente o fluxo analítico até que o modelo da Etapa 8 esteja carregado. O dashboard não poderá exibir resultados substitutos.
+MQTT, visão computacional avançada e notificações externas não fazem parte dessa sequência obrigatória. Só deverão entrar se o contrato de telemetria, a validação do piloto ou a empresa demonstrarem necessidade.
 
 ---
 
-## Primeiro marco funcional
+## Marco demonstrativo alcançado ao final da Etapa 8
 
-O primeiro marco funcional somente será aceito quando o modelo de IA real do projeto estiver integrado. Estrutura de banco, CRUD e simulação de telemetria sem inferência são marcos técnicos intermediários, não uma versão funcional da solução.
+O fluxo demonstrativo abaixo já foi alcançado com dados sintéticos persistidos e modelo experimental. Ele valida a integração de software, mas ainda não representa a solução industrial final nem comprova eficácia com dados reais.
 
 ```text
 55 pontos cadastrados
@@ -1607,7 +1670,7 @@ O primeiro marco funcional somente será aceito quando o modelo de IA real do pr
   -> OS preditiva
 ```
 
-O resultado somente é válido se o frontend estiver lendo o PostgreSQL, o FastAPI estiver executando o artefato treinado e a interrupção da IA impedir novas análises. Nenhuma etapa dessa demonstração poderá ser preenchida por mock, hardcode ou insert de resultado pronto.
+O resultado somente é válido se o frontend estiver lendo o PostgreSQL, o FastAPI estiver executando o artefato treinado e a interrupção da IA impedir novas análises. Nenhuma etapa dessa demonstração poderá ser preenchida por mock, hardcode ou insert de resultado pronto. Para atender integralmente ao desafio ainda são obrigatórias as Etapas 9–12: escala P5–P100, inspeção/termogramas rastreáveis, telemetria contínua com fila durável e piloto seguro com dados reais.
 
 ---
 
@@ -1624,10 +1687,13 @@ Adequar a aplicação atual de PCM com IA preditiva para resolver o desafio ofic
 - inspeção de quadros elétricos, disjuntores, contatores e relés térmicos;
 - 55 pontos inspecionados;
 - 19 pontos com anomalia térmica, equivalentes a aproximadamente 34,5% dos pontos;
+- classificação original de 2 “Prioridade 3/P20” (intervir em até 30 dias), 10 “Prioridade 4/P10” (intervir em parada programada) e 7 “Prioridade 5/P5” (intensificar monitoramento), dentro da escala empresarial `P5`–`P100`;
 - ponto crítico de 75,6 °C contra referência de 40 °C;
 - diferença térmica crítica de 35,6 °C;
+- padrão predominante relatado de aquecimento em bornes/conexões de disjuntores e contatores, compatível com resistência elevada e possíveis conexões frouxas, oxidadas ou subdimensionadas;
 - risco de falha, parada não planejada e incêndio;
 - ausência de monitoramento contínuo entre as inspeções.
+- necessidade de cruzar termograma, TAG, histórico de recomendações e evolução térmica sem substituir a decisão do profissional.
 
 A solução final deverá monitorar continuamente os pontos térmicos e depender da IA para identificar comportamentos anormais, estimar risco, sugerir o provável modo de falha, priorizar intervenções e explicar cada ocorrência. O humano continuará responsável por reconhecer/confirmar o defeito e decidir a manutenção, pois a IA não executa intervenção física.
 
@@ -1649,9 +1715,9 @@ As seguintes decisões orientam toda a implementação:
    - FastAPI;
    - scikit-learn;
    - arquitetura modular existente em `apps/web/src/features`.
-2. O banco atual é de desenvolvimento/demonstração e poderá ser completamente reinicializado.
-3. O modelo atual poderá ser descartado e treinado novamente.
-4. A primeira versão utilizará dados sintéticos produzidos por simulação temporal, identificados como sintéticos, persistidos no banco e construídos especificamente para o cenário termográfico.
+2. A autorização histórica para reinicializar o banco foi consumida nas etapas iniciais. A partir da Etapa 9, não executar reset: toda alteração será aditiva, migrável, com backup e rollback.
+3. O modelo térmico experimental entregue na Etapa 8 será preservado como baseline; substituição ou promoção exige comparação controlada e rollback.
+4. A demonstração utiliza dados sintéticos produzidos por simulação temporal, identificados como sintéticos e persistidos. Dados reais do piloto serão armazenados com origem distinta e nunca misturados silenciosamente.
 5. As métricas do modelo anterior não serão apresentadas como validação da solução termográfica.
 6. A IA será a base obrigatória da solução. Sem modelo ML carregado, validado e saudável, não existirão diagnóstico, risco, incidente de defeito, alerta preditivo, relatório analítico ou nova OS preditiva.
 7. A decisão de manutenção continuará humana. A IA detecta, classifica, explica e recomenda; o profissional confirma ou rejeita o defeito e decide, autoriza e executa a intervenção.
@@ -1660,10 +1726,15 @@ As seguintes decisões orientam toda a implementação:
 10. A primeira implantação deverá priorizar os 19 pontos já anormais, mantendo cadastrados os 55 pontos para expansão.
 11. O sistema deverá ser independente de fabricante de sensor ou câmera.
 12. A instalação física em painéis elétricos deverá ser validada e executada por profissionais habilitados, seguindo NR-10, procedimentos internos e avaliação de engenharia da planta.
+13. A prioridade empresarial `P5`–`P100` será preservada como dimensão própria e auditável. Ela não poderá ser substituída pelo `RiskLevel` do modelo nem por `WorkOrderPriority` genérica.
+14. A solução final deverá ser implantável sem interrupção não planejada e sem alterar/substituir as proteções elétricas existentes; qualquer parada necessária será decisão programada e autorizada pela planta.
+15. Termogramas serão evidência vinculada ao TAG, à inspeção e à leitura. Visão computacional avançada não é obrigatória, mas armazenar, proteger e reconstruir a evidência é.
 
 ---
 
-## 3. Diagnóstico do repositório atual
+## 3. Diagnóstico inicial do repositório — registro histórico
+
+> Esta seção descreve a linha de base encontrada em 02/09/2026 e explica por que as Etapas 1–8 foram necessárias. Ela não é uma lista de trabalho atual. Para novas implementações, usar as Etapas 9–12 e `docs/checklist-pendencias.md`; não recriar correções já concluídas.
 
 ### 3.1. Componentes que devem ser preservados
 
@@ -1730,40 +1801,47 @@ O comportamento atual mantém o PCM funcional sem FastAPI, usa `DemoPredictor` q
 
 ## 4. Escopo funcional da solução adequada
 
-### 4.1. Escopo obrigatório do MVP
+### 4.1. Escopo obrigatório do software
 
 - cadastrar a hierarquia da planta, equipamentos, painéis, componentes e pontos;
 - representar os 55 pontos termográficos;
 - identificar os 19 pontos originalmente anormais;
+- registrar a inspeção original com exatamente 2 P3/P20, 10 P4/P10 e 7 P5/P5, mantendo separados o rótulo da fonte e o código empresarial e oferecendo suporte a `P5`, `P10`, `P20`, `P30`, `P50` e `P100`;
+- separar prioridade histórica da inspeção, risco atual da IA, prioridade recomendada pela política empresarial e prioridade final autorizada pelo humano;
 - receber leituras térmicas manuais, por CSV, simulador e API de telemetria;
+- registrar inspeções e termogramas vinculados ao ponto/TAG, leitura e recomendação histórica;
 - gerar dados sintéticos por simulação temporal e aplicá-los ao banco real de desenvolvimento, sem mocks;
 - calcular temperatura relativa, `deltaT`, tendência e permanência acima do limite como features da IA;
 - executar obrigatoriamente modelo termográfico treinado para analisar cada leitura/janela elegível;
 - consolidar predições consecutivas em uma única ocorrência;
 - exibir o estado atual de cada ponto;
 - gerar alertas explicáveis com proveniência completa da IA;
+- representar resistência elevada/conexão frouxa como modo de falha provável e manter oxidação ou subdimensionamento como hipóteses até confirmação técnica; temperatura isolada não fecha causa-raiz;
 - permitir confirmação, rejeição ou solicitação de nova leitura pelo humano;
 - permitir conversão em OS somente após confirmação humana;
 - impedir OS preditiva manual ou sem `sourcePredictionId` válido;
 - acompanhar a normalização após manutenção;
 - armazenar confirmação do técnico e causa encontrada;
 - manter histórico e trilha de auditoria;
+- operar a telemetria por fila durável com vazão suficiente para 55 pontos/minuto, sem usar o cron diário como substituto de monitoramento contínuo;
 - executar um modelo treinado com dados sintéticos termográficos;
 - sinalizar claramente que o modelo é experimental, foi treinado com dados sintéticos e ainda não foi validado na planta;
 - operar em fail-closed quando o modelo estiver ausente, corrompido ou indisponível;
 - provar, por teste automatizado, que a remoção da IA interrompe o núcleo operacional.
+- permitir implantação progressiva sem interrupção não planejada, condicionada a responsável técnico, NR-10 e procedimentos da planta.
 
-### 4.2. Escopo recomendado para o piloto
+### 4.2. Escopo obrigatório para o piloto e a validação industrial
 
 - ingestão automática de sensores ou câmeras;
 - cadastro e autenticação individual de dispositivos;
 - envio de dados em lote quando a rede retornar;
 - detecção de sensor offline;
-- imagem térmica associada ao ponto ou painel;
-- notificações por canal configurável;
+- validação do termograma e das medições contínuas contra câmera de referência;
+- notificações externas por canal configurável somente se a empresa pedir; alerta interno auditável é o requisito mínimo;
 - dashboard de atualização quase em tempo real;
 - indicadores de tempo de detecção e falsos alertas;
 - piloto inicial nos 19 pontos anormais.
+- metas aprovadas para disponibilidade, antecedência, falsos alertas, tempo até decisão/OS e zero interrupção não planejada causada pela implantação.
 
 ### 4.3. Fora do escopo inicial
 
@@ -1775,6 +1853,9 @@ O comportamento atual mantém o PCM funcional sem FastAPI, usa `DemoPredictor` q
 - treinamento definitivo usando somente dados sintéticos;
 - visão computacional avançada para qualquer marca de termograma já no primeiro MVP;
 - instrumentação imediata dos 55 pontos sem piloto técnico.
+- MQTT, ESP32 ou qualquer fabricante/protocolo específico como dependência obrigatória;
+- retreinamento ou promoção automática do modelo sem aprovação e comparação controlada;
+- novas funcionalidades do PCM mecânico/AI4I que não sustentem diretamente o fluxo termográfico do desafio.
 
 ---
 
@@ -1957,13 +2038,62 @@ enum ThermalCause {
   NOT_CONFIRMED
   OTHER
 }
+
+enum CompanyThermalPriority {
+  P5
+  P10
+  P20
+  P30
+  P50
+  P100
+}
 ```
+
+`CompanyThermalPriority` representa a classificação usada pela empresa e não é sinônimo de severidade da IA. `P5`, `P10` e `P20` possuem os significados informados no desafio; `P30`, `P50` e `P100` devem existir para compatibilidade, mas seus prazos e critérios somente poderão ser configurados depois de validação formal pela empresa.
+
+Os significados conhecidos devem ser preservados literalmente: `P20` = intervir em até 30 dias; `P10` = intervir em parada programada; `P5` = intensificar monitoramento. O rótulo ordinal da fonte (“Prioridade 3”, “Prioridade 4” ou “Prioridade 5”) é evidência separada do código P e não deve ser recalculado pelo software.
 
 ### 6.3. Novas entidades sugeridas
 
 O schema abaixo é uma referência de implementação. Os nomes finais devem seguir a convenção adotada no Prisma atual.
 
 ```prisma
+model ThermalInspection {
+  id              String   @id @default(uuid())
+  inspectedAt     DateTime
+  sourceReference String?
+  technicianName  String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  findings ThermalInspectionFinding[]
+
+  @@index([inspectedAt])
+  @@map("thermal_inspections")
+}
+
+model ThermalInspectionFinding {
+  id                   String                 @id @default(uuid())
+  inspectionId         String
+  thermalPointId       String
+  thermalReadingId     String?
+  sourcePriorityLabel  String?
+  companyPriority      CompanyThermalPriority
+  recommendation       String?
+  observedCause        ThermalCause?
+  historicalBaseline   Boolean                @default(false)
+  createdAt            DateTime               @default(now())
+
+  inspection    ThermalInspection @relation(fields: [inspectionId], references: [id], onDelete: Restrict)
+  thermalPoint  ThermalPoint      @relation(fields: [thermalPointId], references: [id], onDelete: Restrict)
+  thermalReading ThermalReading?  @relation(fields: [thermalReadingId], references: [id], onDelete: SetNull)
+
+  @@unique([inspectionId, thermalPointId])
+  @@index([thermalPointId, createdAt])
+  @@index([companyPriority])
+  @@map("thermal_inspection_findings")
+}
+
 model ElectricalPanel {
   id          String    @id @default(uuid())
   tag         String    @unique
@@ -2030,6 +2160,7 @@ model ThermalPoint {
   readings   ThermalReading[]
   incidents  ThermalIncident[]
   predictions Prediction[]
+  inspectionFindings ThermalInspectionFinding[]
 
   @@index([componentId])
   @@map("thermal_points")
@@ -2084,6 +2215,7 @@ model ThermalReading {
   sensorDevice SensorDevice? @relation(fields: [sensorDeviceId], references: [id])
   thermogram   Thermogram?
   predictions  Prediction[]
+  inspectionFindings ThermalInspectionFinding[]
 
   @@unique([sensorDeviceId, sequence])
   @@index([thermalPointId, measuredAt])
@@ -2196,6 +2328,17 @@ Campos sugeridos:
 - somente o fluxo de confirmação do incidente pode criar a OS preditiva;
 - o formulário genérico não deve oferecer `PREDICTIVE` como opção manual;
 - as validações devem ocorrer no service e, quando possível, ser reforçadas por constraint/transação no banco.
+- uma OS térmica deve preservar `companyPriority` e `priorityPolicyVersion` usados na decisão; `WorkOrderPriority` poderá continuar para ordenação interna, mas não substituirá a classificação P5–P100.
+
+### 6.7. Invariantes da inspeção e da prioridade empresarial
+
+- a inspeção original é evidência histórica imutável, não um sinal de risco atual;
+- a carga demonstrativa deve conter 19 `ThermalInspectionFinding`: 2 com rótulo original “Prioridade 3” e P20, 10 “Prioridade 4” e P10, e 7 “Prioridade 5” e P5;
+- `TP-039` pertence ao grupo P20 e preserva 75,6 °C, referência de 40 °C e `deltaT` de 35,6 °C;
+- toda inspeção/finding referencia um `ThermalPoint` e, quando disponível, a leitura e o termograma correspondentes;
+- a prioridade recomendada atual só pode nascer depois de uma Prediction válida e de uma política empresarial versionada;
+- ajuste humano da prioridade exige autor, data e justificativa;
+- incidentes, OS e relatórios guardam snapshot da prioridade e da versão da política, evitando que uma alteração futura reescreva decisões antigas.
 
 ---
 
@@ -2242,6 +2385,17 @@ Ordem de precedência:
 4. configuração padrão versionada e documentada.
 
 Thresholds produzem contexto e flags de segurança. Eles não podem abrir sozinhos um incidente de defeito, gerar uma `Prediction` ou substituir o modelo.
+
+#### 7.3.1. Compatibilidade com a prioridade P5–P100
+
+O sistema deverá apresentar quatro dimensões sem misturá-las:
+
+1. `originalCompanyPriority`: classificação imutável da inspeção de origem;
+2. `riskLevel`/`riskScore`: estado atual inferido pela IA;
+3. `recommendedCompanyPriority`: recomendação produzida por política versionada depois de uma inferência válida;
+4. `finalCompanyPriority`: prioridade confirmada/ajustada pelo responsável humano e copiada para a OS.
+
+A aplicação não poderá codificar uma equivalência universal como `CRITICAL = P100`. Os significados de P30/P50/P100 e qualquer conversão deverão vir de configuração aprovada pela empresa. Enquanto essa política não existir, o sistema exibe risco e prioridade histórica, mas não inventa prioridade atual.
 
 ### 7.4. Elegibilidade, inferência e persistência
 
@@ -2409,6 +2563,8 @@ Essa rota não deve usar a sessão Auth.js de usuário. Ela deverá autenticar o
 - registro de falhas de autenticação;
 - processamento assíncrono ou em lote quando o volume crescer;
 - resposta parcial por item, sem perder o lote inteiro por uma linha inválida.
+- referência opcional a termograma previamente enviado por canal autenticado; arquivos não devem trafegar como base64 dentro do lote de alta frequência.
+- persistência em fila durável antes da resposta de sucesso; memória do processo serverless não é garantia de entrega.
 
 ### 8.5. Frequência e volume
 
@@ -2870,6 +3026,8 @@ Exibir:
 - sem comunicação;
 - incidentes abertos;
 - pontos originalmente anormais: 19;
+- distribuição da inspeção original: `2 × P20`, `10 × P10`, `7 × P5`;
+- filtros e contadores da escala P5–P100, apresentados separadamente de normal/atenção/alto/crítico;
 - maior temperatura atual;
 - maior `deltaT`;
 - tendência mais rápida;
@@ -2887,6 +3045,7 @@ Cada ponto deverá permitir acesso rápido a:
 - referência;
 - `deltaT`;
 - severidade;
+- prioridade histórica da inspeção e prioridade empresarial atual/final, sem substituir a severidade da IA;
 - origem da severidade e versão do modelo;
 - estado do sensor;
 - incidente aberto;
@@ -2904,6 +3063,8 @@ Abas recomendadas:
 6. Ordens de serviço;
 7. Configuração e calibração;
 8. Auditoria.
+
+O detalhe deverá deixar claro o que é histórico da inspeção, o que é medição atual, o que foi sugerido pela IA e o que foi decidido pelo humano. A aba de termogramas deverá exibir o arquivo autorizado, metadados/ROI, checksum e vínculo com a leitura e o achado da inspeção.
 
 ### 12.6. Gráficos
 
@@ -2937,6 +3098,8 @@ Campos mínimos:
 - fonte da medição.
 
 Ao salvar, a leitura deverá entrar no mesmo pipeline obrigatório da IA usado pela telemetria. O formulário não poderá pedir ou aceitar risco, causa prevista ou severidade final informados pelo usuário.
+
+A imagem é opcional apenas para leituras numéricas de sensor que não produzam termograma. Para uma inspeção cuja fonte seja câmera termográfica, o arquivo ou uma referência importada verificável é obrigatório para que o achado seja considerado evidência completa.
 
 ### 12.8. Importação CSV
 
@@ -3036,12 +3199,14 @@ Criar os seguintes relatórios em `features/reports`:
 - intervenções;
 - estado atual.
 - proveniência das inferências e decisão humana.
+- prioridade histórica, recomendada e final na escala P5–P100, com versão da política.
 
 ### 14.2. Relatório dos 55 pontos
 
 - cobertura;
 - distribuição por severidade;
 - 19 pontos originalmente anormais;
+- distribuição `2 × P20`, `10 × P10`, `7 × P5` e evolução posterior sem reescrever a inspeção original;
 - evolução por período;
 - ranking de risco;
 - sensores offline;
@@ -3230,6 +3395,8 @@ Criar agregados horários e diários contendo:
 
 Os prazos finais deverão ser definidos com a indústria e com a capacidade do ambiente contratado.
 
+A fila de telemetria não poderá depender do cron diário para manter a vazão operacional. O cron serve para reconciliação, retenção e recuperação; processamento contínuo exige consumidor durável dimensionado acima da taxa de entrada.
+
 ---
 
 ## 18. Observabilidade
@@ -3248,9 +3415,12 @@ Registrar métricas técnicas e operacionais:
 - divergências de versão ou checksum;
 - distribuição de score;
 - incidentes por severidade;
+- achados e incidentes por prioridade P5–P100;
 - indicações rejeitadas pelo profissional;
 - eventos críticos não detectados;
 - versão do modelo em uso.
+- tamanho/idade do backlog e taxa de recuperação de `AI_FAILED`;
+- interrupções não planejadas relacionadas à implantação.
 
 O endpoint `/health` deverá informar:
 
@@ -3289,6 +3459,10 @@ Não expor caminhos internos, segredos ou detalhes sensíveis no health público
 - rejeição de `Prediction` sem proveniência válida;
 - decisão humana obrigatória;
 - bloqueio de OS preditiva sem `CONFIRMED`.
+- escala P5–P100 e política versionada;
+- distribuição histórica `2 × P20`, `10 × P10`, `7 × P5`;
+- separação entre prioridade histórica, risco atual, prioridade recomendada e prioridade final;
+- validação e autorização de metadados/upload de termograma.
 
 ### 19.2. Unitários — FastAPI
 
@@ -3319,6 +3493,9 @@ Não expor caminhos internos, segredos ou detalhes sensíveis no health público
 - sensor offline → alerta técnico;
 - indisponibilidade da IA → leituras pendentes, sem Prediction, incidente, alerta analítico ou OS;
 - dados simulados persistidos → inferência real, sem inserts de resultado pronto.
+- inspeção/termograma → TAG/leitura/Prediction/incidente/OS/relatório rastreáveis;
+- risco da IA → política versionada → prioridade P5–P100 → decisão humana, sem equivalência hardcoded;
+- fila durável → retentativa de falha → recuperação sem duplicar leitura ou incidente.
 
 ### 19.4. E2E
 
@@ -3335,6 +3512,8 @@ Criar suíte Playwright para:
 9. validar monitoramento pós-ação;
 10. confirmar normalização;
 11. interromper a IA e comprovar que novas análises e o fluxo preditivo ficam bloqueados.
+12. conferir a inspeção original `2 × P20`, `10 × P10`, `7 × P5` sem confundi-la com risco atual;
+13. abrir termograma autorizado e reconstruir seu vínculo com TAG, leitura, Prediction, decisão e OS.
 
 ### 19.5. Testes de carga
 
@@ -3345,6 +3524,8 @@ Simular pelo menos:
 - importação de histórico;
 - vários pontos críticos simultâneos;
 - indisponibilidade temporária do FastAPI, mantendo as leituras no banco para reprocessamento e sem fabricar resultados.
+- consumidor contínuo sustentando taxa maior ou igual a 55 leituras/minuto por período suficiente para provar ausência de backlog crescente;
+- recuperação de `AI_FAILED` e reinício do worker sem perda, duplicação ou dependência de processo em memória.
 
 ---
 
@@ -3352,8 +3533,10 @@ Simular pelo menos:
 
 | Arquivo ou módulo                                       | Adequação                                                                 |
 | ------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `apps/web/prisma/schema.prisma`                         | Adicionar domínio termográfico e novas relações                           |
-| `apps/web/prisma/seed.ts`                               | Cadastrar estrutura e carregar séries simuladas dos 55 pontos, sem semear resultados analíticos |
+| `apps/web/prisma/schema.prisma`                         | Adicionar inspeção original, prioridade P5–P100, termogramas, dispositivos e fila durável |
+| `apps/web/prisma/seed.ts`                               | Preservar séries simuladas e carregar os 19 achados históricos 2×P3/P20, 10×P4/P10 e 7×P5/P5, sem semear resultados analíticos |
+| `features/thermal-inspections`                          | Registrar inspeções/achados imutáveis, termogramas e política empresarial versionada |
+| `features/thermal-analysis-jobs`                        | Reservar, processar, repetir e auditar análises sem depender da memória serverless |
 | `features/sensor-readings`                              | Migrar responsabilidades para `thermal-readings` ou manter apenas legado  |
 | `features/predictions/schemas/predictive-ai.schema.ts`  | Novo contrato de risco térmico                                            |
 | `features/predictions/services/predictive-ai.client.ts` | Enviar janela real, exigir proveniência e tratar indisponibilidade como bloqueio |
@@ -3363,6 +3546,7 @@ Simular pelo menos:
 | `/predictive-maintenance`                               | Redirecionar/evoluir para dashboard termográfico                          |
 | `/equipments/[id]`                                      | Incluir painéis, pontos, termogramas e incidentes                         |
 | `features/reports`                                      | Novos PDFs térmicos                                                       |
+| `features/thermograms`                                  | Upload privado, autorização, checksum, metadados, ROI e vínculo por TAG   |
 | `services/predictive-ai/app/schemas`                    | Substituir entrada genérica por contrato térmico temporal                 |
 | `services/predictive-ai/app/ml/predictor.py`            | Criar predictor térmico baseado obrigatoriamente no artefato ML           |
 | `services/predictive-ai/app/ml/model_loader.py`         | Validar estágio, checksum e metadados; falhar fechado                     |
@@ -3371,7 +3555,7 @@ Simular pelo menos:
 | `services/predictive-ai/models/metadata.json`           | Novo formato com origem sintética explícita                               |
 | `apps/web/.env.example`                                 | Variáveis de telemetria, retenção, armazenamento e bloqueio AI-first       |
 | `services/predictive-ai/.env.example`                   | Artefato obrigatório, estágio, checksum e modo fail-closed              |
-| `docker-compose.yml`                                    | Opcionalmente incluir broker MQTT e serviço de desenvolvimento do gateway |
+| `docker-compose.yml`                                    | Incluir gateway/broker somente se a decisão de infraestrutura do piloto exigir; MQTT não é requisito funcional |
 | `docs/architecture.md`                                  | Atualizar arquitetura e fluxo                                             |
 | `docs/predictive-maintenance.md`                        | Substituir pelo fluxo termográfico                                        |
 | `docs/checklist-pendencias.md`                          | Separar débitos legados dos requisitos GPMS 2026                          |
@@ -3389,6 +3573,9 @@ DEVICE_OFFLINE_MULTIPLIER=3
 THERMAL_RAW_RETENTION_DAYS=90
 THERMOGRAM_STORAGE_PROVIDER=...
 THERMOGRAM_MAX_FILE_SIZE_MB=10
+THERMAL_ANALYSIS_QUEUE_PROVIDER=...
+THERMAL_ANALYSIS_MAX_ATTEMPTS=5
+THERMAL_ANALYSIS_BACKOFF_SECONDS=30
 THERMAL_BACKFILL_NOTIFICATIONS=false
 ```
 
@@ -3409,169 +3596,130 @@ Segredos não devem ser incluídos nos arquivos `.env.example` além de placehol
 
 ---
 
-## 22. Checklist consolidado por fase — referência
+## 22. Checklist consolidado por etapa — fonte oficial
 
-> A sequência operacional oficial deste documento é a **Parte I — Roteiro de execução**. Este checklist permanece como visão resumida dos requisitos.
+> Esta seção substitui o checklist legado por fases. O detalhamento executável fica em `docs/checklist-pendencias.md`; em caso de divergência, prevalecem a revisão contratual de 09/09/2026 e as Etapas 9–12 deste documento.
 
-### Fase 0 — proteção e alinhamento
+### Etapas encerradas
 
-- [ ] Criar tag/backup da versão atual.
-- [ ] Confirmar que o banco alvo é apenas desenvolvimento.
-- [ ] Registrar as decisões deste documento no repositório.
-- [ ] Definir nomenclatura final de painel, componente e ponto.
-- [ ] Validar com responsável técnico os limites iniciais e o significado da referência de 40 °C.
+- [x] Etapas 1–8: domínio termográfico, 55 pontos, simulação persistida, inferência ML experimental, rastreabilidade, incidente, revisão humana e OS condicionada.
+- [x] Etapa 9: inspeção histórica 2/10/7, escala P5–P100, telemetria autenticada/idempotente, fila durável e consumidor Vercel Queues.
+- [x] Caso demonstrativo: 75,6 °C contra referência de 40 °C, com ΔT de 35,6 °C.
+- [x] Resultado demonstrativo identificado como sintético/experimental, sem alegação de eficácia industrial.
 
-### Fase 1 — domínio e banco — concluída
+### Etapa 9 — prioridade empresarial e monitoramento contínuo
 
-- [x] Implementar novos enums e modelos Prisma.
-- [x] Criar e aplicar a migration aditiva da Etapa 1.
-- [x] Criar permissões e respectivos testes.
-- [x] Validar schema, migration, Prisma Client, typecheck e integração conforme registro da Etapa 1.
+- [x] Implementar a escala empresarial P5–P100 separada do risco calculado pela IA e da prioridade da OS.
+- [x] Registrar a inspeção original imutável com exatamente 2 achados P3/P20, 10 P4/P10 e 7 P5/P5.
+- [!] Obter da empresa o significado operacional de P30, P50 e P100. O software já os reconhece e bloqueia definições inventadas; a validação externa continua na Etapa 12.
+- [x] Implementar telemetria autenticada, idempotente, segura e independente de fornecedor.
+- [x] Persistir cada lote e seu trabalho analítico em fila durável antes de responder sucesso.
+- [x] Processar continuamente com consumidor Vercel Queues, retentativa automática e métricas para 55 pontos/minuto; executar soak no deploy na Etapa 11.
+- [x] Usar o cron diário apenas para reconciliação, retenção e recuperação, nunca como mecanismo principal de monitoramento.
 
-### Fase 2 — simulação, captura e estado pendente
+### Etapa 10 — termogramas, relatórios e feedback
 
-- [ ] Criar repositories e services básicos do domínio termográfico.
-- [ ] Criar simulador determinístico das séries dos 55 pontos, preservando no manifesto que 19 eram anormais na inspeção original.
-- [ ] Aplicar as leituras simuladas ao banco de desenvolvimento pelo fluxo real, sem `Prediction`, incidente, alerta ou OS pré-criados.
-- [ ] Criar cadastro de painéis, componentes e pontos.
-- [ ] Criar formulário de entrada térmica manual, sem campos de risco, diagnóstico ou severidade.
-- [ ] Criar importação CSV térmica.
-- [ ] Persistir as leituras como `PENDING_AI` e calcular apenas features de entrada, como `deltaT` e tendência.
-- [ ] Enfileirar todas as origens de leitura para o mesmo núcleo de IA.
-- [ ] Manter incidentes, alertas analíticos e OS preditivas bloqueados até existir inferência válida.
-- [ ] Criar dashboard e detalhe do ponto sem arrays mockados ou severidade calculada no frontend.
+- [ ] Armazenar termogramas de forma privada, com checksum, metadados, ROI e vínculo auditável ao TAG, inspeção e leitura.
+- [ ] Exibir na mesma linha do tempo inspeção, termograma, leitura, inferência, prioridade empresarial, decisão humana, incidente e OS.
+- [ ] Emitir relatório individual e consolidado com a classificação histórica P5–P100 e a política aplicada.
+- [ ] Registrar justificativa e auditoria quando a decisão humana divergir da recomendação.
 
-### Fase 3 — novo treinamento sintético
+### Etapa 11 — qualidade, segurança e demonstração
 
-- [ ] Criar gerador de série temporal.
-- [ ] Validar distribuição e cenários.
-- [ ] Gerar janelas sem vazamento de alvo.
-- [ ] Separar treino, validação, teste e cenário reservado de demonstração.
-- [ ] Treinar baseline e candidatos ML.
-- [ ] Comparar candidatos e usar regras apenas como baseline offline/guarda de segurança.
-- [ ] Gerar artefato e metadados.
-- [ ] Integrar o artefato real ao FastAPI como dependência obrigatória.
-- [ ] Rejeitar inicialização/inferência sem modelo, checksum, versão e score válidos.
-- [ ] Processar o cenário reservado persistido no banco, sem mocks ou resultados prontos.
-- [ ] Implementar `Prediction` → incidente/alerta → revisão humana → OS confirmada.
-- [ ] Exibir origem sintética no frontend.
+- [ ] Cobrir por testes a escala P, a distribuição 2/10/7, o acesso a termogramas, a fila durável e a recuperação de falhas.
+- [ ] Executar E2E de telemetria até OS confirmada e E2E fail-closed sem o núcleo de IA.
+- [ ] Demonstrar os 55 pontos, os 19 achados históricos e o caso crítico sem confundir histórico com estado atual.
+- [ ] Remover ou ocultar caminhos legados que não tenham dependência ativa e possam confundir o desafio.
 
-### Fase 4 — telemetria
+### Etapa 12 — piloto industrial
 
-- [ ] Criar modelo e gestão de dispositivos.
-- [ ] Criar rota autenticada em lote.
-- [ ] Implementar idempotência.
-- [ ] Implementar last seen/offline.
-- [ ] Criar simulador de gateway.
-- [ ] Executar teste de carga para 55 pontos/minuto.
-- [ ] Avaliar MQTT sem acoplar o domínio a um broker específico.
-
-### Fase 5 — relatórios e demonstração
-
-- [ ] Relatório por ponto.
-- [ ] Relatório consolidado dos 55 pontos.
-- [ ] Linha do tempo do incidente.
-- [ ] Cenário completo de 75,6 °C.
-- [ ] Cenário de OS e normalização.
-- [ ] E2E da demonstração com confirmação/rejeição humana.
-- [ ] Teste E2E removendo/desabilitando a IA e comprovando o bloqueio completo do fluxo preditivo.
-- [ ] Verificação de ausência de dados mockados, hardcodes analíticos e inserts de resultado pronto.
-
-### Fase 6 — piloto real
-
-- [ ] Levantamento técnico dos 19 pontos.
-- [ ] Seleção e instalação segura dos sensores.
-- [ ] Calibração e baseline.
-- [ ] Comparação com termografia manual.
-- [ ] Registro de diagnósticos reais.
-- [ ] Medição de falsos alertas.
-- [ ] Planejamento da expansão para 55 pontos.
-
-### Fase 7 — aprendizado com dados reais
-
-- [ ] Criar exportação anonimizada/controlada.
-- [ ] Construir dataset a partir de leituras e intervenções.
-- [ ] Definir horizonte de previsão com a manutenção.
-- [ ] Treinar modelo candidato.
-- [ ] Comparar contra regras e modelo sintético.
-- [ ] Promover somente se superar critérios mínimos.
-- [ ] Manter rollback do modelo anterior.
+- [ ] Validar TAGs, termogramas, referências e prioridades com os responsáveis da planta.
+- [ ] Executar análise de risco, plano NR-10, instalação progressiva, rollback físico/lógico e janelas autorizadas.
+- [ ] Comprovar zero interrupção não planejada e nenhuma alteração indevida das proteções elétricas.
+- [ ] Comparar sensores com termografia de referência e medir disponibilidade, latência, falso positivo e falso negativo.
+- [ ] Aprovar metas, responsáveis e período de medição antes de promover qualquer modelo treinado com dados reais.
 
 ---
+## 23. Critérios de aceite da solução final
 
-## 23. Critérios de aceite do MVP
+### Cobertura e aderência ao caso
 
-### Dados
+- [x] Existem exatamente 55 pontos no cenário demonstrativo.
+- [x] Existem 19 pontos sinalizados no cenário atual e o caso de 75,6 °C contra 40 °C está reproduzido.
+- [ ] A inspeção original registra, sem alteração retroativa, exatamente 2 achados “Prioridade 3/P20”, 10 “Prioridade 4/P10” e 7 “Prioridade 5/P5”.
+- [ ] A escala P5–P100 é compatível com o processo da empresa e sua política versionada está visível.
+- [ ] Autoclaves, estufas, câmaras frias, quadros de produção e pelo menos 20 centrífugas podem ser cadastrados e monitorados pela mesma solução.
+- [ ] A rastreabilidade por TAG reconstrói inspeção, termograma, leitura, recomendação, inferência, decisão, incidente, OS e resultado.
 
-- [ ] Existem exatamente 55 pontos cadastrados.
-- [ ] O manifesto separado identifica os 19 pontos originalmente anormais, sem determinar o estado exibido pela aplicação.
-- [ ] O simulador reproduz como série temporal o caso de 75,6 °C contra 40 °C.
-- [ ] As leituras sintéticas foram aplicadas ao PostgreSQL e percorrem o mesmo fluxo das futuras leituras reais.
-- [ ] O cenário demonstrativo não participou do treino do modelo.
-- [ ] Leituras possuem horário, origem e rastreabilidade.
-- [ ] Duplicações por sequência não criam novas leituras.
-- [ ] Não existem `Prediction`, incidente, alerta ou OS semeados para simular resultado.
+### Monitoramento contínuo e análise
 
-### Análise
+- [ ] Leituras manuais, importadas, simuladas e de dispositivos percorrem o mesmo contrato de entrada e o mesmo núcleo de IA.
+- [ ] A ingestão autenticada e idempotente sustenta 55 pontos/minuto sem crescimento contínuo da fila.
+- [ ] O trabalho analítico fica persistido em fila durável antes da resposta de sucesso.
+- [ ] Retentativas e reprocessamento recuperam automaticamente falhas transitórias e registros `AI_FAILED`.
+- [ ] O cron diário apenas reconcilia pendências; a análise contínua não depende dele.
+- [x] A demonstração calcula ΔT, tendência e persistência e produz `Prediction` com proveniência.
+- [ ] A solução preserva dados quando a IA está indisponível e não inventa classificação, incidente ou OS.
 
-- [ ] `deltaT` é calculado corretamente.
-- [ ] Tendência e persistência são consideradas.
-- [ ] Toda classificação operacional nasce de uma inferência real do artefato ML.
-- [ ] Toda predição possui `inferenceId`, score, risco, confiança, versão, checksum, modo de falha provável e explicação.
-- [ ] A origem sintética do modelo é visível.
-- [ ] Sem o modelo validado, novas leituras ficam pendentes/falhas e nenhuma `Prediction`, incidente analítico, alerta de risco ou OS preditiva é criada.
-- [ ] Não existe fallback operacional por regras, predictor de demonstração ou resposta hardcoded.
+### Priorização, alertas e decisão humana
 
-### Alertas
+- [ ] Prioridade empresarial P5–P100, risco da IA e prioridade da OS são conceitos separados na API, banco, interface e relatórios.
+- [ ] Uma política versionada transforma evidência em prioridade recomendada sem equivalências arbitrárias.
+- [ ] Incidentes aplicam persistência, deduplicação, escalonamento e histerese.
+- [ ] Sensor offline, leitura inválida ou inferência vencida nunca aparecem como condição normal.
+- [ ] Toda mudança humana de prioridade ou diagnóstico possui autor, horário e justificativa.
+- [ ] Somente defeito confirmado por pessoa autorizada pode originar OS preditiva.
 
-- [ ] Leituras repetidas atualizam um incidente existente.
-- [ ] A severidade pode escalar.
-- [ ] Histerese evita abre/fecha repetitivo.
-- [ ] Sensor offline não aparece como ponto normal.
-- [ ] Todo incidente analítico referencia a `Prediction` que o originou.
-- [ ] O profissional pode confirmar, rejeitar, declarar inconclusivo ou solicitar nova leitura, sempre com auditoria.
-- [ ] Somente um defeito `CONFIRMED` por humano pode gerar uma OS preditiva com contexto completo.
+### Evidência termográfica e interface
 
-### Interface
+- [ ] Termogramas ficam em armazenamento privado com checksum, metadados, controle de acesso e vínculo ao TAG.
+- [ ] O detalhe do ponto mostra temperatura, referência, ΔT, tendência, carga, termograma e histórico de decisões.
+- [ ] O dashboard distingue os 19 achados da inspeção histórica do estado corrente calculado pela IA.
+- [ ] Relatórios por ponto e consolidados apresentam política e prioridade históricas, recomendadas e finais.
+- [ ] O estágio sintético/experimental do modelo é explícito e não é apresentado como validação industrial.
 
-- [ ] O dashboard mostra situação dos 55 pontos.
-- [ ] É possível localizar rapidamente os críticos.
-- [ ] O detalhe mostra temperatura, referência, `deltaT`, tendência e carga.
-- [ ] A linha do tempo relaciona leitura, alerta, OS e normalização.
-- [ ] A interface mostra prontidão da IA, proveniência da inferência e decisão humana.
-- [ ] Com a IA indisponível, a interface bloqueia a análise e explica o estado sem inventar severidade.
-- [ ] A interface é responsiva nas telas operacionais prioritárias.
+### Implantação e validação industrial
 
-### Qualidade
+- [ ] A instalação foi aprovada por responsável técnico e segue NR-10 e procedimentos internos.
+- [ ] O sensoriamento é adequado para proximidade de quadros energizados e não substitui nem altera proteções elétricas.
+- [ ] A implantação progressiva possui rollback e não causa interrupção não planejada.
+- [ ] O piloto compara leituras contínuas com termografia manual de referência.
+- [ ] Metas para cobertura, disponibilidade, latência, falsos positivos, falsos negativos e tempo até correção foram aprovadas.
+- [ ] Modelo treinado com dados reais só é promovido após superar critérios técnicos definidos, com rollback disponível.
 
-- [ ] Testes unitários e de integração principais passam.
-- [ ] Existe E2E do cenário crítico.
-- [ ] O pipeline de treino é reproduzível.
-- [ ] O artefato possui checksum e metadados.
-- [ ] O teste de remoção/indisponibilidade do artefato comprova que o fluxo preditivo para completamente.
-- [ ] Não há mocks, arrays hardcoded, respostas falsas ou resultados analíticos pré-gravados no ambiente demonstrativo.
-- [ ] Não existem segredos versionados.
-- [ ] O reset foi executado somente no banco confirmado de desenvolvimento.
+### Qualidade e segurança
+
+- [ ] Testes unitários, integração, E2E, segurança e carga das jornadas críticas passam.
+- [ ] Não existem segredos versionados, resultados analíticos semeados, respostas falsas ou fallback operacional por regras.
+- [ ] Acesso a dispositivos, termogramas, revisões e OS obedece autenticação, autorização e auditoria.
+- [ ] Backup, retenção, observabilidade e recuperação da fila foram testados no ambiente de implantação.
 
 ---
-
 ## 24. Indicadores de sucesso do piloto
 
 O piloto deverá acompanhar:
 
 - percentual de pontos monitorados continuamente;
+- cobertura por área e por tipo de ativo, incluindo as mais de 20 centrífugas;
 - disponibilidade dos sensores;
+- disponibilidade do pipeline completo de ingestão e análise;
+- latência entre medição, inferência, alerta e decisão humana;
 - antecedência do alerta;
 - falsos alertas por ponto/dia;
+- taxa de falsos negativos comparada à termografia de referência;
 - percentual de alertas confirmados pelos técnicos;
 - tempo entre indicação da IA e decisão humana;
 - taxa de confirmação, rejeição e inconclusão das indicações;
 - tempo entre alerta e OS;
+- tempo entre detecção e correção;
+- quantidade de pontos que evoluem para prioridade empresarial mais urgente entre inspeções;
 - tempo acima do limite crítico;
 - reincidência após manutenção;
 - quantidade de inspeções manuais direcionadas pelo sistema;
 - falhas encontradas antes de uma parada;
 - diferença entre leitura contínua e termografia manual de referência.
+
+Cada indicador deverá ter fórmula, fonte, baseline, meta, período de apuração e responsável aprovados. A meta de interrupções não planejadas causadas pela implantação é obrigatoriamente zero.
 
 Evitar afirmar “incêndios evitados” sem evidência causal documentada.
 
@@ -3595,28 +3743,40 @@ Evitar afirmar “incêndios evitados” sem evidência causal documentada.
 | Termograma expor informação industrial                | Controle de acesso e armazenamento privado                        |
 | Rede instável                                         | Buffer no gateway, lote, sequência e idempotência                 |
 | Limites globais inadequados                           | Override por componente/ponto e validação da engenharia           |
+| Confundir P5–P100 com risco da IA ou prioridade da OS | Conceitos separados e política empresarial versionada             |
+| Inventar significado para P30/P50/P100                 | Obter definição oficial e bloquear publicação da política incompleta |
+| Cron diário criar falsa aparência de continuidade      | Ingestão e fila duráveis; cron somente para reconciliação          |
+| Backlog crescer acima da capacidade analítica          | Métricas de idade/vazão, autoscaling compatível e teste de carga   |
+| Instalação causar parada ou interferir em proteção     | Plano aprovado, implantação progressiva, rollback e meta de zero interrupção |
+| Perder vínculo entre termograma e TAG                  | Armazenamento privado, checksum e relações imutáveis auditáveis    |
 
 ---
 
 ## 26. Definição de pronto da adequação
 
-A adequação será considerada concluída quando a aplicação conseguir demonstrar, de ponta a ponta, o seguinte cenário:
+A aplicação estará 100% aderente ao desafio somente quando todos os itens abaixo forem comprovados em ambiente equivalente ao piloto:
 
-1. Um dos 55 pontos recebe leituras contínuas.
-2. A temperatura evolui de uma condição normal para 75,6 °C.
-3. A referência permanece em 40 °C.
-4. O sistema calcula `deltaT = 35,6 °C`.
-5. O artefato ML real analisa a janela temporal e classifica o risco como crítico.
-6. A `Prediction` registra `inferenceId`, score, confiança, versão, checksum, modo de falha provável e fatores determinantes.
-7. Um único incidente originado pela IA é aberto e atualizado pelas leituras seguintes.
-8. O planejador analisa a evidência e confirma ou rejeita o defeito indicado.
-9. Somente se a decisão for `CONFIRMED`, o planejador pode gerar a OS preditiva.
-10. O técnico executa a intervenção física e registra diagnóstico e ação.
-11. Novas leituras passam novamente pela IA e demonstram queda e estabilização da temperatura.
-12. O sistema encerra o período pós-ação após validação analítica e humana.
-13. O relatório apresenta a linha do tempo completa: dado, inferência, revisão humana, OS, manutenção e resultado.
-14. A interface informa que o modelo foi treinado com dados sintéticos e que o cenário demonstrativo reservado foi persistido no banco.
-15. Ao remover ou indisponibilizar a IA, o sistema continua recebendo e preservando dados, mas nenhuma nova análise, classificação, priorização, incidente analítico, alerta de risco, relatório preditivo ou OS preditiva funciona.
-16. Nenhum passo utiliza mock, resposta falsa, array hardcoded ou registro analítico previamente inserido.
+1. Os 55 pontos e sua hierarquia por área, equipamento, painel, componente e TAG estão cadastrados e auditáveis.
+2. A inspeção original permanece como evidência histórica imutável: 19 achados, sendo exatamente 2 Prioridade 3/P20, 10 Prioridade 4/P10 e 7 Prioridade 5/P5.
+3. O caso crítico mantém 75,6 °C, referência de 40 °C e ΔT de 35,6 °C, acompanhado do termograma e da recomendação originais.
+4. A empresa validou o significado e o uso de toda a escala P5–P100; a versão da política acompanha cada decisão.
+5. Prioridade empresarial, risco da IA e prioridade da OS são armazenados e apresentados separadamente.
+6. A solução suporta autoclaves, estufas, câmaras frias, quadros e mais de 20 centrífugas sem lógica específica por ativo.
+7. Leituras manuais, importadas e contínuas entram por contratos consistentes, com origem, horário, qualidade e idempotência.
+8. A ingestão e a fila duráveis sustentam ao menos 55 pontos/minuto sem perda nem crescimento sustentado do backlog.
+9. O cron diário funciona somente como reconciliação; telemetria, análise, alertas e recuperação operam fora dessa janela.
+10. A IA analisa janelas temporais e registra proveniência completa; regras são guardas de engenharia e não falsificam predições.
+11. Se a IA falhar, os dados são preservados e reprocessados, mas nenhuma classificação, priorização, ocorrência ou OS é inventada.
+12. Incidentes aplicam deduplicação, persistência, histerese e escalonamento, distinguindo dado vencido, sensor offline e condição normal.
+13. A pessoa autorizada revisa evidências e justifica confirmação, rejeição, inconclusão ou mudança de prioridade.
+14. A OS preditiva nasce somente de defeito confirmado e preserva TAG, evidências, inferência, política e decisão que a originaram.
+15. Termogramas ficam em armazenamento privado e podem ser relacionados por auditoria à inspeção, leitura, inferência, incidente e manutenção.
+16. Relatórios mostram a evolução térmica e a linha do tempo completa até a correção e a validação pós-manutenção.
+17. A interface identifica claramente dados simulados e modelo sintético/experimental, sem alegar validação industrial.
+18. O piloto foi instalado por processo seguro e aprovado, sem modificar proteções e com zero interrupção não planejada.
+19. Leituras contínuas foram comparadas com termografia manual e os indicadores reais possuem baseline, meta, período e responsável.
+20. Existe decisão técnica documentada para expansão, incluindo todas as centrífugas, e rollback físico, lógico e de modelo.
 
-Esse fluxo torna a IA a base indispensável do aplicativo e preserva o humano no controle daquilo que exige responsabilidade e ação no mundo físico: reconhecer o defeito, autorizar e executar a manutenção.
+Enquanto qualquer item obrigatório estiver pendente, o produto pode ser apresentado como demonstração funcional ou piloto em validação, mas não como solução industrial integralmente comprovada.
+
+Essa definição mantém a IA como suporte preditivo indispensável e preserva a decisão e a autorização de manutenção sob responsabilidade humana.

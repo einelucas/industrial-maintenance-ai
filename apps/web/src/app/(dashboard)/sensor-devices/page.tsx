@@ -47,7 +47,7 @@ export default async function SensorDevicesPage({ searchParams }: { searchParams
           <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Dispositivos" }]} />
           <h1 className="text-xl font-semibold">Dispositivos</h1>
           <p className="text-sm text-muted-foreground">
-            Cadastro administrativo de dispositivos. A ingestão de telemetria autenticada é implementada na Etapa 9.
+            Dispositivos autenticados individualmente, com rotação, revogação e estado de comunicação auditável.
           </p>
         </div>
         {can(user.role, "device:manage") && (

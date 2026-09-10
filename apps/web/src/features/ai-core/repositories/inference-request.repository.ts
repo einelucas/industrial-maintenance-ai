@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/client";
 import type { Prisma, InferenceRequestStatus } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 
 // Fila de inferência (GPMS 2026 / Etapa 5) — único lugar que lê/escreve
 // `InferenceRequest`. `inferenceRequestId` é sempre a chave determinística
@@ -29,17 +30,104 @@ export const inferenceRequestRepository = {
   markSucceeded: (id: string, predictionId: string) =>
     prisma.inferenceRequest.update({
       where: { id },
-      data: { status: "SUCCEEDED", predictionId, lastErrorCode: null, lastErrorMessage: null },
+      data: { status: "SUCCEEDED", predictionId, lastErrorCode: null, lastErrorMessage: null, completedAt: new Date(), lockedAt: null, leaseExpiresAt: null, lockToken: null },
     }),
 
   markFailed: (id: string, errorCode: string, errorMessage: string) =>
     prisma.inferenceRequest.update({
       where: { id },
-      data: { status: "FAILED", lastErrorCode: errorCode, lastErrorMessage: errorMessage },
+      data: { status: "FAILED", lastErrorCode: errorCode, lastErrorMessage: errorMessage, completedAt: new Date(), lockedAt: null, leaseExpiresAt: null, lockToken: null },
     }),
 
   /** Reabre uma requisição FAILED para ser reprocessada — só usado por retry explícito, nunca automático em loop. */
-  resetToPending: (id: string) => prisma.inferenceRequest.update({ where: { id }, data: { status: "PENDING" } }),
+  resetToPending: (id: string) => prisma.inferenceRequest.update({ where: { id }, data: { status: "PENDING", availableAt: new Date(), completedAt: null, lockedAt: null, leaseExpiresAt: null, lockToken: null } }),
+
+  async claimBatch(limit: number, leaseSeconds = 55) {
+    const lockToken = randomUUID();
+    const now = new Date();
+    const leaseExpiresAt = new Date(now.getTime() + leaseSeconds * 1000);
+    const rows = await prisma.$queryRaw<Array<{ inferenceRequestId: string }>>`
+      WITH candidates AS (
+        SELECT ir."id"
+        FROM "inference_requests" ir
+        INNER JOIN "thermal_readings" tr ON tr."id" = ir."thermalReadingId"
+        WHERE ir."status" = 'PENDING'::"InferenceRequestStatus"
+          AND ir."availableAt" <= ${now}
+          AND (ir."leaseExpiresAt" IS NULL OR ir."leaseExpiresAt" < ${now})
+        ORDER BY tr."measuredAt" DESC, ir."createdAt" DESC
+        FOR UPDATE OF ir SKIP LOCKED
+        LIMIT ${limit}
+      )
+      UPDATE "inference_requests" ir
+      SET "lockedAt" = ${now}, "leaseExpiresAt" = ${leaseExpiresAt}, "lockToken" = ${lockToken}, "updatedAt" = ${now}
+      FROM candidates
+      WHERE ir."id" = candidates."id"
+      RETURNING ir."inferenceRequestId"
+    `;
+    return { lockToken, inferenceRequestIds: rows.map((row) => row.inferenceRequestId) };
+  },
+
+  async scheduleRetry(inferenceRequestId: string, lockToken: string) {
+    const current = await prisma.inferenceRequest.findUnique({ where: { inferenceRequestId }, select: { attemptCount: true } });
+    if (!current) return;
+    const delaySeconds = Math.min(300, 5 * 2 ** Math.max(0, current.attemptCount - 1));
+    await prisma.inferenceRequest.updateMany({
+      where: { inferenceRequestId, status: "PENDING", lockToken },
+      data: {
+        availableAt: new Date(Date.now() + delaySeconds * 1000),
+        lockedAt: null,
+        leaseExpiresAt: null,
+        lockToken: null,
+      },
+    });
+  },
+
+  releaseLease: (inferenceRequestId: string, lockToken: string) =>
+    prisma.inferenceRequest.updateMany({
+      where: { inferenceRequestId, lockToken },
+      data: { lockedAt: null, leaseExpiresAt: null, lockToken: null },
+    }),
+
+  releaseExpiredLeases: (now = new Date()) =>
+    prisma.inferenceRequest.updateMany({
+      where: { status: "PENDING", leaseExpiresAt: { lt: now } },
+      data: { lockedAt: null, leaseExpiresAt: null, lockToken: null, availableAt: now },
+    }),
+
+  async recoverTransientFailures(maxRecoveries = 3, now = new Date()) {
+    const retryableBefore = new Date(now.getTime() - 60 * 60 * 1000);
+    const recoverable = await prisma.inferenceRequest.findMany({
+      where: {
+        status: "FAILED",
+        recoveryCount: { lt: maxRecoveries },
+        completedAt: { lt: retryableBefore },
+        lastErrorCode: { in: ["NOT_READY", "NETWORK_ERROR", "TIMEOUT"] },
+      },
+      select: { id: true, thermalReadingId: true },
+      take: 500,
+    });
+    if (!recoverable.length) return 0;
+    await prisma.$transaction([
+      prisma.inferenceRequest.updateMany({
+        where: { id: { in: recoverable.map((request) => request.id) }, status: "FAILED" },
+        data: {
+          status: "PENDING",
+          attemptCount: 0,
+          recoveryCount: { increment: 1 },
+          availableAt: now,
+          completedAt: null,
+          lockedAt: null,
+          leaseExpiresAt: null,
+          lockToken: null,
+        },
+      }),
+      prisma.thermalReading.updateMany({
+        where: { id: { in: recoverable.map((request) => request.thermalReadingId) }, analysisStatus: "AI_FAILED" },
+        data: { analysisStatus: "PENDING_AI" },
+      }),
+    ]);
+    return recoverable.length;
+  },
 
   findPendingBatch: (limit: number) =>
     prisma.inferenceRequest.findMany({
