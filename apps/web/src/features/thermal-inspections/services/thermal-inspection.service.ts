@@ -1,5 +1,6 @@
 import type { CompanyThermalPriority } from "@prisma/client";
 import { prisma } from "@/lib/db/client";
+import { GPMS_EXPECTED_ORIGINAL_DISTRIBUTION } from "@/features/gpms-scope/constants";
 
 export const ORIGINAL_INSPECTION_REFERENCE = "GPMS2026-ORIGINAL-INSPECTION-DEMO-MAPPING-V1";
 
@@ -10,12 +11,7 @@ export const SOURCE_PRIORITY_LABELS: Record<"P3" | "P4" | "P5", string> = {
 };
 
 export const EXPECTED_ORIGINAL_DISTRIBUTION: Record<CompanyThermalPriority, number> = {
-  P5: 7,
-  P10: 10,
-  P20: 2,
-  P30: 0,
-  P50: 0,
-  P100: 0,
+  ...GPMS_EXPECTED_ORIGINAL_DISTRIBUTION,
 };
 
 export const thermalInspectionService = {

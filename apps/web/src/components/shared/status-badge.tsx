@@ -26,7 +26,7 @@ export function AlertSeverityBadge({ severity }: { severity: AlertSeverity }) {
   return <Badge variant={RISK_VARIANT[severity]}>{RISK_LABEL[severity]}</Badge>;
 }
 
-const WORK_ORDER_STATUS_LABEL: Record<WorkOrderStatus, string> = {
+export const WORK_ORDER_STATUS_LABELS: Record<WorkOrderStatus, string> = {
   OPEN: "Aberta",
   PLANNED: "Planejada",
   IN_PROGRESS: "Em andamento",
@@ -47,7 +47,7 @@ const WORK_ORDER_STATUS_VARIANT: Record<WorkOrderStatus, "neutral" | "attention"
 };
 
 export function WorkOrderStatusBadge({ status }: { status: WorkOrderStatus }) {
-  return <Badge variant={WORK_ORDER_STATUS_VARIANT[status]}>{WORK_ORDER_STATUS_LABEL[status]}</Badge>;
+  return <Badge variant={WORK_ORDER_STATUS_VARIANT[status]}>{WORK_ORDER_STATUS_LABELS[status]}</Badge>;
 }
 
 const PRIORITY_LABEL: Record<WorkOrderPriority, string> = {

@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
+import { AlertTriangle, UserRound } from "lucide-react";
 import { workOrderService } from "@/features/work-orders/services/work-order.service";
 import { VALID_TRANSITIONS } from "@/features/work-orders/schemas/work-order.schema";
 import { isWorkOrderDelayed } from "@/features/work-orders/services/work-order-delay.service";
+import { WORK_ORDER_TYPE_LABELS } from "@/features/work-orders/constants";
 import { StatusTransitionForm } from "@/features/work-orders/components/status-transition-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
-import { WorkOrderStatusBadge, PriorityBadge } from "@/components/shared/status-badge";
+import { WorkOrderStatusBadge, PriorityBadge, WORK_ORDER_STATUS_LABELS } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils/format";
 
@@ -34,16 +36,20 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
       <div className="space-y-1">
         <Breadcrumbs
           items={[
-            { label: "Dashboard", href: "/dashboard" },
+            { label: "Monitoramento", href: "/thermal-monitoring" },
             { label: "Ordens de Serviço", href: "/work-orders" },
             { label: workOrder.number },
           ]}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold">{workOrder.number} — {workOrder.title}</h1>
           <WorkOrderStatusBadge status={workOrder.status} />
           <PriorityBadge priority={workOrder.priority} />
-          {delayed && <Badge variant="critical">Atrasada</Badge>}
+          {delayed && (
+            <Badge variant="critical" className="gap-1">
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" /> Atrasada
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -59,11 +65,14 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
             </div>
             <div>
               <div className="text-muted-foreground">Tipo</div>
-              <div>{workOrder.type}</div>
+              <div>{WORK_ORDER_TYPE_LABELS[workOrder.type]}</div>
             </div>
             <div>
               <div className="text-muted-foreground">Responsável</div>
-              <div>{workOrder.assignedUser?.name ?? "Não atribuído"}</div>
+              <div className="flex items-center gap-1.5 font-medium">
+                <UserRound className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                {workOrder.assignedUser?.name ?? "Não atribuído"}
+              </div>
             </div>
             <div>
               <div className="text-muted-foreground">Criada por</div>
@@ -115,7 +124,7 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
               <div>
                 <div className="font-medium">{entry.action}</div>
                 <div className="text-muted-foreground">
-                  {entry.previousStatus ?? "—"} → {entry.newStatus ?? "—"} {entry.description ? `· ${entry.description}` : ""}
+                  {entry.previousStatus ? WORK_ORDER_STATUS_LABELS[entry.previousStatus] : "—"} → {entry.newStatus ? WORK_ORDER_STATUS_LABELS[entry.newStatus] : "—"} {entry.description ? `· ${entry.description}` : ""}
                 </div>
               </div>
               <div className="whitespace-nowrap text-xs text-muted-foreground">

@@ -28,6 +28,9 @@ export const thermalMonitoringRepository = {
       readings: { orderBy: [{ measuredAt: "desc" }, { id: "desc" }], take: 1, select: readingSelect },
       predictions: { where: traceablePredictionWhere, orderBy: predictionOrder, take: 1, include: predictionEvidenceInclude },
       inspectionFindings: { orderBy: { createdAt: "desc" }, take: 1, include: { inspection: true } },
+      // Mesmo critério de "aberto" usado em openIncidents(); só para saber
+      // se o ponto tem um incidente em aberto, sem trazer o registro inteiro.
+      incidents: { where: { status: { notIn: ["NORMALIZED", "HUMAN_REJECTED", "DISMISSED"] } }, select: { id: true }, take: 1 },
     },
   }),
   queue: () => prisma.thermalReading.groupBy({ by: ["analysisStatus"], _count: { _all: true }, where: { thermalPoint: { active: true } } }),

@@ -3,7 +3,8 @@
 // DIRECT_URL = direct connection (usada apenas por `prisma migrate`).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

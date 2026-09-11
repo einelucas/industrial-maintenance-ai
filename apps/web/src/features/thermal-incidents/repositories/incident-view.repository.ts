@@ -8,6 +8,7 @@ export const incidentViewRepository = {
       prisma.thermalIncident.findMany({ where, skip, take, orderBy: [{ severity: "desc" }, { openedAt: "desc" }], include: {
         thermalPoint: { include: { component: { include: { panel: { include: { sector: true } } } } } },
         triggerPrediction: { include: predictionEvidenceInclude },
+        workOrder: { select: { id: true, number: true, status: true } },
       } }),
       prisma.thermalIncident.count({ where }),
     ]);
@@ -17,6 +18,7 @@ export const incidentViewRepository = {
     thermalPoint: { include: {
       component: { include: { panel: true } },
       predictions: { where: traceablePredictionWhere, orderBy: predictionOrder, take: 1, include: predictionEvidenceInclude },
+      inspectionFindings: { orderBy: { createdAt: "desc" }, take: 1 },
     } },
     triggerPrediction: { include: predictionEvidenceInclude },
     humanReviews: { orderBy: { createdAt: "asc" }, include: { reviewedBy: { select: { name: true } } } },

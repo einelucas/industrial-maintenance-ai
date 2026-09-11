@@ -73,12 +73,13 @@ export function currentPointRisk(
 export interface MonitoringFilters {
   search?: string; sectorId?: string; equipmentId?: string; panelId?: string; componentId?: string;
   risk?: string; connectivity?: string;
-  companyPriority?: string;
+  companyPriority?: string; openIncident?: string;
 }
 
 export interface FilterablePoint {
   code: string; name: string; currentRisk: RiskLevel | null; connectivity: Connectivity; historicalPriority: CompanyThermalPriority | null;
   component: { id: string; panel: { id: string; sectorId: string; equipmentId: string | null } };
+  hasOpenIncident?: boolean;
 }
 
 export function filterMonitoringPoints<T extends FilterablePoint>(points: T[], filters: MonitoringFilters): T[] {
@@ -90,7 +91,8 @@ export function filterMonitoringPoints<T extends FilterablePoint>(points: T[], f
     (!filters.componentId || p.component.id === filters.componentId) &&
     (!filters.risk || (filters.risk === "PENDING_AI" ? p.currentRisk === null : p.currentRisk === filters.risk)) &&
     (!filters.companyPriority || p.historicalPriority === filters.companyPriority) &&
-    (!filters.connectivity || p.connectivity === filters.connectivity));
+    (!filters.connectivity || p.connectivity === filters.connectivity) &&
+    (!filters.openIncident || p.hasOpenIncident === true));
 }
 
 export function summarizeMonitoringPoints(points: { currentRisk: RiskLevel | null; connectivity: Connectivity }[]) {
@@ -98,6 +100,15 @@ export function summarizeMonitoringPoints(points: { currentRisk: RiskLevel | nul
   for (const point of points) if (point.currentRisk) counts[point.currentRisk]++;
   return { total: points.length, counts, unclassified: points.filter((p) => !p.currentRisk).length,
     offline: points.filter((p) => p.connectivity === "OFFLINE").length };
+}
+
+// Quebra de conectividade pelos 5 estados possíveis — usada no painel de
+// "Saúde da operação". Separada de summarizeMonitoringPoints (que já tem
+// contrato de teste fixo) para não alterar sua assinatura.
+export function connectivitySummary(points: { connectivity: Connectivity }[]): Record<Connectivity, number> {
+  const counts: Record<Connectivity, number> = { ONLINE: 0, OFFLINE: 0, DEGRADED: 0, NOT_APPLICABLE: 0, UNPROVISIONED: 0 };
+  for (const point of points) counts[point.connectivity]++;
+  return counts;
 }
 
 export function numeric(value: number | null | undefined, unit = ""): string {

@@ -3,8 +3,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Industrial Maintenance Intelligence",
-  description: "Planejamento e Controle da Manutenção Industrial com IA preditiva",
+  title: "GPMS 2026 · Manutenção Preditiva",
+  description: "Monitoramento termográfico contínuo com IA, rastreabilidade por TAG e decisão humana",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

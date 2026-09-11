@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import type { WorkOrderPriority, WorkOrderStatus, WorkOrderType } from "@prisma/client";
 import { workOrderService } from "@/features/work-orders/services/work-order.service";
 import { isWorkOrderDelayed } from "@/features/work-orders/services/work-order-delay.service";
+import { WORK_ORDER_TYPE_LABELS } from "@/features/work-orders/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <Breadcrumbs items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Ordens de Serviço" }]} />
+          <Breadcrumbs items={[{ label: "Monitoramento", href: "/thermal-monitoring" }, { label: "Ordens de Serviço" }]} />
           <h1 className="text-xl font-semibold">Ordens de Serviço</h1>
         </div>
         <Button asChild>
@@ -66,7 +67,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
               <Label htmlFor="type">Tipo</Label>
               <Select id="type" name="type" defaultValue={searchParams.type ?? ""} className="w-40">
                 <option value="">Todos</option>
-                {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{WORK_ORDER_TYPE_LABELS[t]}</option>)}
               </Select>
             </div>
             <div className="space-y-1">
@@ -86,54 +87,62 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: S
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Número</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead>Equipamento</TableHead>
-                <TableHead className="hidden sm:table-cell">Tipo</TableHead>
-                <TableHead>Prioridade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Prazo</TableHead>
-                <TableHead className="hidden sm:table-cell">Responsável</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {workOrders.length === 0 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
-                    Nenhuma ordem de serviço encontrada para os filtros selecionados.
-                  </TableCell>
+                  <TableHead>Número</TableHead>
+                  <TableHead className="hidden md:table-cell">Título</TableHead>
+                  <TableHead>Equipamento</TableHead>
+                  <TableHead className="hidden sm:table-cell">Tipo</TableHead>
+                  <TableHead>Prioridade</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Prazo</TableHead>
+                  <TableHead className="hidden sm:table-cell">Responsável</TableHead>
                 </TableRow>
-              )}
-              {workOrders.map((wo) => {
-                const delayed = isWorkOrderDelayed(wo.scheduledEnd, wo.status);
-                return (
-                  <TableRow key={wo.id}>
-                    <TableCell className="font-mono text-xs">
-                      <Link href={`/work-orders/${wo.id}`} className="text-primary hover:underline">
-                        {wo.number}
-                      </Link>
+              </TableHeader>
+              <TableBody>
+                {workOrders.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                      Nenhuma ordem de serviço encontrada para os filtros selecionados.
                     </TableCell>
-                    <TableCell>{wo.title}</TableCell>
-                    <TableCell>{wo.equipment.tag}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{wo.type}</TableCell>
-                    <TableCell>
-                      <PriorityBadge priority={wo.priority} />
-                    </TableCell>
-                    <TableCell>
-                      <WorkOrderStatusBadge status={wo.status} />
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(wo.scheduledEnd)} {delayed && <Badge variant="critical">Atrasada</Badge>}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{wo.assignedUser?.name ?? "—"}</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                )}
+                {workOrders.map((wo) => {
+                  const delayed = isWorkOrderDelayed(wo.scheduledEnd, wo.status);
+                  return (
+                    <TableRow key={wo.id}>
+                      <TableCell className="font-mono text-xs">
+                        <Link href={`/work-orders/${wo.id}`} className="text-primary hover:underline">
+                          {wo.number}
+                        </Link>
+                        <span className="mt-0.5 block max-w-[10rem] truncate text-xs font-normal text-muted-foreground md:hidden">{wo.title}</span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{wo.title}</TableCell>
+                      <TableCell>{wo.equipment.tag}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{WORK_ORDER_TYPE_LABELS[wo.type]}</TableCell>
+                      <TableCell>
+                        <PriorityBadge priority={wo.priority} />
+                      </TableCell>
+                      <TableCell>
+                        <WorkOrderStatusBadge status={wo.status} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="whitespace-nowrap">{formatDate(wo.scheduledEnd)}</span>
+                        {delayed && (
+                          <Badge variant="critical" className="ml-1 gap-1">
+                            <AlertTriangle className="h-3 w-3" aria-hidden="true" /> Atrasada
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{wo.assignedUser?.name ?? "—"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
           <Pagination page={page} totalPages={totalPages(total)} basePath="/work-orders" searchParams={searchParams} />
         </CardContent>
       </Card>
