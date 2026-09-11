@@ -12,7 +12,7 @@ export interface ThermalReadingFilters {
 }
 
 // Insere em lotes pequenos (~500 linhas) em vez de um único `createMany`
-// gigante — a mesma lição aprendida na Etapa 2 com a semeadura de 6.600
+// gigante — a mesma lição aprendida na Etapa 2 com a semeadura de 13.200
 // leituras contra o pooler do Neon (erro P1017: a conexão fecha sob muitas
 // linhas/round-trips numa única transação implícita longa).
 const BATCH_CHUNK_SIZE = 500;

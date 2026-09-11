@@ -36,7 +36,7 @@ export function ProvisionSensorDeviceForm({ points, defaultThermalPointId }: { p
     <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label htmlFor="serialNumber">Número de série *</Label>
-        <Input id="serialNumber" name="serialNumber" required placeholder="ESP32-GPMS-001" />
+        <Input id="serialNumber" name="serialNumber" required placeholder="ESP32-001" />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="name">Nome *</Label>
@@ -57,16 +57,22 @@ export function ProvisionSensorDeviceForm({ points, defaultThermalPointId }: { p
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="manufacturer">Fabricante</Label>
-        <Input id="manufacturer" name="manufacturer" />
+        <Input id="manufacturer" name="manufacturer" placeholder="Schneider Electric" />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="model">Modelo</Label>
-        <Input id="model" name="model" />
+        <Input id="model" name="model" placeholder="PowerLogic Thermal Tag SPTH150S" />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="firmwareVersion">Versão do firmware</Label>
-        <Input id="firmwareVersion" name="firmwareVersion" />
+        <Input id="firmwareVersion" name="firmwareVersion" placeholder="Confirmar no dispositivo instalado" />
       </div>
+
+      <p className="text-xs text-muted-foreground sm:col-span-2">
+        Registre a referência comercial exatamente como aparece na etiqueta ou ficha técnica. Não invente número de
+        série nem versão de firmware: quando o dado não estiver disponível, indique que depende de confirmação em
+        campo.
+      </p>
 
       {state.error && <p className="text-sm text-status-critical sm:col-span-2">{state.error}</p>}
 

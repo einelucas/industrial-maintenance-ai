@@ -1,16 +1,25 @@
 import { PrismaClient, type CompanyThermalPriority } from "@prisma/client";
-import {
-  EXPECTED_ORIGINAL_DISTRIBUTION,
-  ORIGINAL_INSPECTION_REFERENCE,
-} from "../src/features/thermal-inspections/services/thermal-inspection.service";
 import { DEMO_PRIORITY_POLICY_VERSION } from "../src/features/thermal-priority/constants";
 
 const prisma = new PrismaClient();
 
+// Identificadores do cenário demonstrativo determinístico — legado interno
+// de diagnóstico (script dev-only), espelham os mesmos valores usados por
+// seed-thermal-scenario.ts. Nunca expostos na UI da aplicação.
+const LEGACY_DEMO_INSPECTION_REFERENCE = "GPMS2026-ORIGINAL-INSPECTION-DEMO-MAPPING-V1";
+const LEGACY_DEMO_EXPECTED_DISTRIBUTION: Record<string, number> = {
+  P5: 7,
+  P10: 10,
+  P20: 2,
+  P30: 0,
+  P50: 0,
+  P100: 0,
+};
+
 async function main() {
   const [inspection, policy, requestStatus, deviceStatus, openTechnicalAlerts] = await Promise.all([
     prisma.thermalInspection.findUnique({
-      where: { sourceReference: ORIGINAL_INSPECTION_REFERENCE },
+      where: { sourceReference: LEGACY_DEMO_INSPECTION_REFERENCE },
       include: { findings: { select: { companyPriority: true, sourcePriorityLabel: true, thermalPoint: { select: { code: true } } } } },
     }),
     prisma.thermalPriorityPolicy.findUnique({ where: { version: DEMO_PRIORITY_POLICY_VERSION } }),
@@ -24,7 +33,7 @@ async function main() {
 
   const distribution = { P5: 0, P10: 0, P20: 0, P30: 0, P50: 0, P100: 0 } satisfies Record<CompanyThermalPriority, number>;
   inspection.findings.forEach((finding) => distribution[finding.companyPriority]++);
-  for (const [priority, expected] of Object.entries(EXPECTED_ORIGINAL_DISTRIBUTION)) {
+  for (const [priority, expected] of Object.entries(LEGACY_DEMO_EXPECTED_DISTRIBUTION)) {
     if (distribution[priority as CompanyThermalPriority] !== expected) {
       throw new Error(`Distribuição histórica divergente em ${priority}: esperado ${expected}.`);
     }

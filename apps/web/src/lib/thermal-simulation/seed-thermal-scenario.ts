@@ -10,9 +10,22 @@ import {
   DEMO_RISK_TO_COMPANY_PRIORITY,
 } from "@/features/thermal-priority/services/thermal-priority-policy.service";
 import {
-  EXPECTED_ORIGINAL_DISTRIBUTION,
-  ORIGINAL_INSPECTION_REFERENCE,
-} from "@/features/thermal-inspections/services/thermal-inspection.service";
+  COMMERCIAL_SENSOR_PROFILES,
+  selectCommercialSensorProfile,
+} from "@/features/sensor-devices/catalog/commercial-sensor-catalog";
+// Identificadores do seed demonstrativo determinístico — legado interno,
+// nunca exposto na UI. Preservados como estão (não são "marca", são chaves
+// de idempotência/autoconferência do próprio seed) para não quebrar a
+// releitura de um banco de dev já semeado por uma versão anterior.
+const LEGACY_DEMO_INSPECTION_REFERENCE = "GPMS2026-ORIGINAL-INSPECTION-DEMO-MAPPING-V1";
+const LEGACY_DEMO_EXPECTED_DISTRIBUTION: Record<string, number> = {
+  P5: 7,
+  P10: 10,
+  P20: 2,
+  P30: 0,
+  P50: 0,
+  P100: 0,
+};
 
 // Grava o cenário demonstrativo determinístico (Etapa 2 / GPMS 2026) no banco
 // real, pelas mesmas tabelas/relações que a aplicação usa — nunca dados
@@ -21,7 +34,7 @@ import {
 // humana, em etapas futuras.
 //
 // Grava em lote (createMany + skipDuplicates) em vez de um upsert por
-// registro: com ~290 registros estruturais + 6.600 leituras, um upsert por
+// registro: com ~290 registros estruturais + 13.200 leituras, um upsert por
 // linha soma centenas de round-trips sequenciais contra o Neon remoto e
 // arrisca estourar o tempo de vida da conexão do pooler (visto na prática:
 // erro P1017 "Server has closed the connection" no meio de uma reexecução).
@@ -105,12 +118,29 @@ export async function seedThermalScenario(
 
   const scenario = buildDemoScenario(identitySeed, seriesSeed);
   const { blueprint, seriesByPointCode } = scenario;
+  const componentBlueprintByTag = new Map(blueprint.components.map((component) => [component.tag, component]));
+
+  const referenceDeviceData = blueprint.points.map((point) => {
+    const component = componentBlueprintByTag.get(point.componentTag);
+    if (!component) throw new Error(`Componente ${point.componentTag} não encontrado para selecionar o sensor.`);
+    const profile = selectCommercialSensorProfile({
+      componentType: component.componentType,
+      ratedCurrent: point.ratedCurrent,
+    });
+
+    return {
+      point,
+      profile,
+      serialNumber: `SIM-${point.code}`,
+      name: `Referência ${profile.model} — ${point.code}`,
+    };
+  });
 
   await prisma.sector.createMany({
     data: blueprint.sectors.map((name) => ({
       id: sectorIdOf(name),
       name,
-      description: `Setor de demonstração — ${name} (GPMS 2026, dado sintético).`,
+      description: `Setor de demonstração — ${name} (dado sintético).`,
     })),
     skipDuplicates: true,
   });
@@ -122,7 +152,7 @@ export async function seedThermalScenario(
       category: eq.category,
       criticality: eq.criticality,
       status: "OPERATIONAL" as const,
-      manufacturer: "Demonstração GPMS 2026",
+      manufacturer: "Fabricante demonstrativo (dado sintético)",
       sectorId: sectorIdOf(eq.sector),
     })),
     skipDuplicates: true,
@@ -171,7 +201,7 @@ export async function seedThermalScenario(
       name: point.name,
       componentId: componentIdByTag.get(point.componentTag)!,
       monitoringMode: "SIMULATOR" as const,
-      referenceDescription: `Referência de comparação para ${point.code} (demonstração GPMS 2026).`,
+      referenceDescription: `Referência de comparação para ${point.code} (demonstração, dado sintético).`,
       absoluteLimitC: point.absoluteLimitC,
       deltaTAttentionC: point.deltaTAttentionC,
       deltaTHighC: point.deltaTHighC,
@@ -188,15 +218,16 @@ export async function seedThermalScenario(
   const pointIdByCode = new Map(pointRows.map((p) => [p.code, p.id]));
 
   await prisma.sensorDevice.createMany({
-    data: blueprint.points.map((point) => {
+    data: referenceDeviceData.map(({ point, profile, serialNumber, name }) => {
       const series = seriesByPointCode.get(point.code)!;
       const firstReading = series.persisted[0]!;
       const lastReading = series.persisted[series.persisted.length - 1]!;
       return {
-        serialNumber: `SIM-${point.code}`,
-        name: `Dispositivo virtual — ${point.code}`,
-        manufacturer: "Simulador GPMS 2026",
-        model: "virtual-sim-v1",
+        serialNumber,
+        name,
+        manufacturer: profile.manufacturer,
+        model: profile.model,
+        firmwareVersion: profile.firmwareVersion,
         status: "ONLINE" as const,
         thermalPointId: pointIdByCode.get(point.code)!,
         apiKeyHash: virtualDeviceApiKeyHash(point.code),
@@ -207,6 +238,23 @@ export async function seedThermalScenario(
     }),
     skipDuplicates: true,
   });
+
+  // Backfill seguro para bancos que ainda exibem "Dispositivo virtual".
+  // Atualiza somente o inventário SIM-TP-* criado por este seed; número de
+  // série, credencial, status e datas operacionais permanecem inalterados.
+  for (const profile of Object.values(COMMERCIAL_SENSOR_PROFILES)) {
+    const devices = referenceDeviceData.filter((device) => device.profile.id === profile.id);
+    if (!devices.length) continue;
+    await prisma.sensorDevice.updateMany({
+      where: { serialNumber: { in: devices.map((device) => device.serialNumber) } },
+      data: {
+        name: `Referência ${profile.model}`,
+        manufacturer: profile.manufacturer,
+        model: profile.model,
+        firmwareVersion: profile.firmwareVersion,
+      },
+    });
+  }
   const deviceRows = await prisma.sensorDevice.findMany({
     where: { serialNumber: { in: blueprint.points.map((p) => `SIM-${p.code}`) } },
     select: { id: true, serialNumber: true },
@@ -294,7 +342,7 @@ export async function seedThermalScenario(
   // explicitamente que o segundo código é um mapeamento demonstrativo
   // determinístico, a ser reconciliado com o relatório oficial no piloto.
   let inspection = await prisma.thermalInspection.findUnique({
-    where: { sourceReference: ORIGINAL_INSPECTION_REFERENCE },
+    where: { sourceReference: LEGACY_DEMO_INSPECTION_REFERENCE },
     include: { findings: true },
   });
 
@@ -334,10 +382,10 @@ export async function seedThermalScenario(
 
     await prisma.$transaction(async (tx) => {
       const createdInspection = await tx.thermalInspection.create({ data: {
-        sourceReference: ORIGINAL_INSPECTION_REFERENCE,
+        sourceReference: LEGACY_DEMO_INSPECTION_REFERENCE,
         inspectedAt,
-        technicianName: "Inspeção original do desafio GPMS 2026",
-        notes: "Distribuição original preservada. A identidade do segundo P20 é um mapeamento demonstrativo até reconciliação com o relatório oficial.",
+        technicianName: "Inspeção demonstrativa (dado sintético)",
+        notes: "Distribuição demonstrativa preservada. A identidade do segundo P20 é um mapeamento demonstrativo até reconciliação com uma inspeção real do cliente.",
         immutable: true,
       } });
       await tx.thermalInspectionFinding.createMany({
@@ -346,7 +394,7 @@ export async function seedThermalScenario(
     });
 
     inspection = await prisma.thermalInspection.findUnique({
-      where: { sourceReference: ORIGINAL_INSPECTION_REFERENCE },
+      where: { sourceReference: LEGACY_DEMO_INSPECTION_REFERENCE },
       include: { findings: true },
     });
     if (!inspection) throw new Error("Falha ao persistir a inspeção original.");
@@ -356,7 +404,7 @@ export async function seedThermalScenario(
     acc[finding.companyPriority] = (acc[finding.companyPriority] ?? 0) + 1;
     return acc;
   }, {});
-  for (const [priority, expected] of Object.entries(EXPECTED_ORIGINAL_DISTRIBUTION)) {
+  for (const [priority, expected] of Object.entries(LEGACY_DEMO_EXPECTED_DISTRIBUTION)) {
     if ((findingDistribution[priority] ?? 0) !== expected) {
       throw new Error(`Inspeção original inconsistente para ${priority}: esperado ${expected}, encontrado ${findingDistribution[priority] ?? 0}.`);
     }

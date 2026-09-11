@@ -9,15 +9,15 @@ export const getThermalAiState = cache(() => aiCoreStateService.getState());
 
 export const thermalMonitoringService = {
   async dashboard() {
-    const [rows, queue, queueMetrics, openIncidents, originalDistribution, ai] = await Promise.all([
-      thermalMonitoringRepository.points(), thermalMonitoringRepository.queue(), thermalMonitoringRepository.queueMetrics(), thermalMonitoringRepository.openIncidents(), thermalInspectionService.originalDistribution(), getThermalAiState(),
+    const [rows, queue, queueMetrics, openIncidents, historicalDistribution, ai] = await Promise.all([
+      thermalMonitoringRepository.points(), thermalMonitoringRepository.queue(), thermalMonitoringRepository.queueMetrics(), thermalMonitoringRepository.openIncidents(), thermalInspectionService.distribution(), getThermalAiState(),
     ]);
     const now = new Date();
     const points = rows.map((point) => {
       const prediction = point.predictions.find(isTraceablePrediction);
       return { ...point, prediction, historicalPriority: point.inspectionFindings[0]?.companyPriority ?? null, currentRisk: currentPointRisk(point.readings[0], prediction, ai.status), connectivity: pointConnectivity(point, now), hasOpenIncident: point.incidents.length > 0 };
     });
-    return { points, queue, queueMetrics, openIncidents, originalDistribution, ai, now, summary: summarizeMonitoringPoints(points) };
+    return { points, queue, queueMetrics, openIncidents, historicalDistribution, ai, now, summary: summarizeMonitoringPoints(points) };
   },
 };
 

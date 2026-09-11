@@ -11,6 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { formatDateTime } from "@/lib/utils/format";
 import { setSensorDeviceMaintenanceAction } from "@/features/sensor-devices/actions/set-sensor-device-maintenance.action";
+import {
+  findCommercialSensorProfile,
+  selectReferenceGateway,
+} from "@/features/sensor-devices/catalog/commercial-sensor-catalog";
 
 export default async function SensorDeviceDetailPage({ params }: { params: { id: string } }) {
   const user = await requirePermission("device:view");
@@ -19,6 +23,11 @@ export default async function SensorDeviceDetailPage({ params }: { params: { id:
 
   const canManage = can(user.role, "device:manage");
   const isRevoked = device.status === "DISABLED";
+  const hardwareProfile = findCommercialSensorProfile(device.manufacturer, device.model);
+  const isReferenceRecord = device.serialNumber.startsWith("SIM-");
+  const gatewayAssignment = hardwareProfile && isReferenceRecord
+    ? selectReferenceGateway(device.thermalPoint.code)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -45,6 +54,17 @@ export default async function SensorDeviceDetailPage({ params }: { params: { id:
           </form></div>
         )}
       </div>
+
+      {hardwareProfile && isReferenceRecord && (
+        <div className="rounded-lg border border-status-attention/40 bg-status-attention/10 px-4 py-3 text-sm">
+          <p className="font-medium">Modelo comercial de referência</p>
+          <p className="mt-1 text-muted-foreground">
+            Fabricante, modelo e especificações vêm de documentação oficial. O identificador, o estado ONLINE, a
+            credencial e as leituras deste registro ainda são simulados até a compra, instalação e comissionamento em
+            campo.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -100,6 +120,68 @@ export default async function SensorDeviceDetailPage({ params }: { params: { id:
           </Card>
         )}
       </div>
+
+      {hardwareProfile && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>Arquitetura e especificações do dispositivo</CardTitle>
+              <Badge variant="neutral">REFERÊNCIA {hardwareProfile.commercialReference}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5 text-sm">
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ["Tipo", hardwareProfile.sensorType],
+                ["Grandeza", hardwareProfile.measurement],
+                ["Comunicação do sensor", hardwareProfile.communication],
+                ["Alimentação", hardwareProfile.power],
+                ["Faixa de temperatura", hardwareProfile.temperatureRange],
+                ["Precisão", hardwareProfile.accuracy],
+                [
+                  "Gateway",
+                  gatewayAssignment
+                    ? `${gatewayAssignment.assetTag} — ${hardwareProfile.gateway}`
+                    : hardwareProfile.gateway,
+                ],
+                ["Firmware mínimo do gateway", hardwareProfile.gatewayMinimumFirmware],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-md border bg-muted/20 p-3">
+                  <dt className="font-medium text-muted-foreground">{label}</dt>
+                  <dd className="mt-1">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="space-y-1">
+              <p className="font-medium">Aplicação proposta neste ponto</p>
+              <p className="text-muted-foreground">{hardwareProfile.application}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium">Fluxo de integração previsto</p>
+              <p className="text-muted-foreground">{hardwareProfile.integration}</p>
+              {gatewayAssignment && <p className="text-muted-foreground">Cobertura: {gatewayAssignment.scope}.</p>}
+              <p className="text-xs text-muted-foreground">
+                O sensor não publica diretamente na API do MegaTherm AI; o conector edge entre o gateway e a API deve
+                ser validado no piloto.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {hardwareProfile.officialSources.map((source) => (
+                <a
+                  key={source.url}
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  {source.label} ↗
+                </a>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {canManage && isRevoked && (
         <Card>

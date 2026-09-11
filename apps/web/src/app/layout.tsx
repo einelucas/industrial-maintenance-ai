@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { BRAND } from "@/config/brand";
 
 export const metadata: Metadata = {
-  title: "GPMS 2026 · Manutenção Preditiva",
-  description: "Monitoramento termográfico contínuo com IA, rastreabilidade por TAG e decisão humana",
+  title: BRAND.name,
+  description: BRAND.description,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -15,6 +15,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { AnalysisStatusBadge } from "@/components/shared/status-badge";
 import { DEFAULT_PAGE_SIZE, parsePage, totalPages } from "@/lib/pagination";
+import { FEATURE_FLAGS } from "@/config/feature-flags";
 
 const SOURCE_OPTIONS: MonitoringMode[] = ["MANUAL", "CSV", "SIMULATOR", "POINT_SENSOR", "THERMAL_ARRAY", "THERMAL_CAMERA"];
 const ANALYSIS_STATUS_OPTIONS: AnalysisStatus[] = ["PENDING_AI", "ANALYZED", "AI_FAILED", "SUPERSEDED"];
@@ -60,7 +61,7 @@ export default async function ThermalReadingsPage({ searchParams }: { searchPara
               </Link>
             </Button>
           )}
-          {can(user.role, "thermal-reading:simulate") && (
+          {can(user.role, "thermal-reading:simulate") && FEATURE_FLAGS.thermalSimulatorEnabled && (
             <Button asChild>
               <Link href="/thermal-readings/simulator">
                 <Sparkles className="h-4 w-4" /> Simulador

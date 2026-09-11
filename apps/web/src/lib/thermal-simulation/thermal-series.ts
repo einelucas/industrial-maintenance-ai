@@ -6,7 +6,13 @@ import type { PointBlueprint } from "./plant-blueprint";
 // limpas do seed produzam exatamente os mesmos timestamps.
 export const DEMO_SCENARIO_END = new Date("2026-09-03T06:00:00.000Z");
 export const DURATION_DAYS = 5;
-export const SAMPLE_INTERVAL_MINUTES = 60;
+// Precisa ser < 60 min: a janela de tendência da IA (calculate-temporal-features.ts)
+// exige >=2 leituras estritamente dentro dos últimos 60 minutos. Com
+// espaçamento igual a 60 min, a leitura anterior cai exatamente na borda
+// excluída da janela e a inferência nunca sai de INSUFFICIENT_DATA, para
+// nenhuma leitura da série (bug de densidade de amostragem, não da fórmula
+// da janela — essa é validada contra o fixture de paridade Python/TS).
+export const SAMPLE_INTERVAL_MINUTES = 30;
 export const SAMPLES_PER_POINT = (DURATION_DAYS * 24 * 60) / SAMPLE_INTERVAL_MINUTES;
 export const POST_ACTION_SAMPLES = 12;
 

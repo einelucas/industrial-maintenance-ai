@@ -2,6 +2,7 @@ import { Text, View, StyleSheet, Page, Font } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { COLORS } from "@/features/reports/pdf/theme";
+import { BRAND } from "@/config/brand";
 
 // Desliga a hifenização automática (quebra estranha em PT-BR sem dicionário
 // próprio configurado).
@@ -116,7 +117,7 @@ export function ReportHeader({ title, subtitle }: { title: string; subtitle?: st
   return (
     <View style={styles.header} fixed>
       <View style={styles.headerRow}>
-        <Text style={styles.brand}>PCM — Industrial AI</Text>
+        <Text style={styles.brand}>{BRAND.name}</Text>
         <Text>{format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</Text>
       </View>
       <Text style={styles.reportTitle}>{title}</Text>
@@ -128,7 +129,7 @@ export function ReportHeader({ title, subtitle }: { title: string; subtitle?: st
 export function ReportFooter() {
   return (
     <View style={styles.footer} fixed>
-      <Text>Gerado automaticamente pelo sistema PCM — Industrial AI</Text>
+      <Text>Gerado automaticamente pelo {BRAND.name}</Text>
       <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
     </View>
   );

@@ -55,7 +55,7 @@ O projeto também deve ficar preparado para o próximo passo de deploy, com o bu
 - Executar testes TypeScript sem integração externa, typecheck, lint, testes Python e build Next.js.
 - Executar o novo verificador contra FastAPI real e banco configurado, sem escrita.
 - Validar o Dockerfile por build real quando Docker estiver disponível; caso contrário, registrar precisamente a limitação.
-- Atualizar `README.md`, `docs/architecture.md`, `Adequaçoes.md`, exemplos de ambiente e checklist pertinente.
+- Atualizar `README.md`, `docs/architecture.md`, o painel de controle de `Adequaçoes.md` e os exemplos de ambiente.
 - Registrar neste arquivo a data de consumo, os testes executados e qualquer limitação que permaneça. Só declarar como comprovado o que foi efetivamente executado.
 
 ## Registro de consumo

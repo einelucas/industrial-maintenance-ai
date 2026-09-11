@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CompanyThermalPriority } from "@prisma/client";
 import { AlertTriangle, Crosshair, Flame, HelpCircle, Siren, WifiOff } from "lucide-react";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/permissions/policies";
@@ -15,15 +16,15 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { formatDateTime } from "@/lib/utils/format";
 import { ThermalSyncButton } from "@/features/ai-core/components/thermal-sync-button";
 import { MonitoringAutoRefresh } from "@/features/thermal-monitoring/components/monitoring-auto-refresh";
-import { GpmsScopeSummary } from "@/features/gpms-scope/components/gpms-scope-summary";
-import { GPMS_ORIGINAL_CLASSIFICATIONS, GPMS_SCOPE } from "@/features/gpms-scope/constants";
+import { COMPANY_PRIORITY_LABELS } from "@/features/thermal-priority/constants";
+import { CompanyPriorityBadge } from "@/features/thermal-priority/components/company-priority-badge";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export default async function ThermalMonitoringPage({ searchParams }: { searchParams: MonitoringFilters }) {
   const user = await requirePermission("thermal-point:view");
-  const { points, summary, queue, queueMetrics, openIncidents, originalDistribution, ai, now } = await thermalMonitoringService.dashboard();
+  const { points, summary, queue, queueMetrics, openIncidents, historicalDistribution, ai, now } = await thermalMonitoringService.dashboard();
   const aiFailedReadings = queue.find((q) => q.analysisStatus === "AI_FAILED")?._count._all ?? 0;
   const filtered = filterMonitoringPoints(points, searchParams);
   const unique = (items: { id: string; name: string }[]) => Array.from(new Map(items.map((i) => [i.id, i])).values());
@@ -41,14 +42,10 @@ export default async function ThermalMonitoringPage({ searchParams }: { searchPa
   const lastPrediction = [...predictions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
   const fastest = points.filter((p) => p.currentRisk && p.prediction?.trendCPerHour != null).sort((a, b) => b.prediction!.trendCPerHour! - a.prediction!.trendCPerHour!)[0];
 
-  const historicalDistribution = GPMS_ORIGINAL_CLASSIFICATIONS.map((classification) => ({
-    ...classification,
-    count: originalDistribution[classification.companyPriority],
-  }));
-  const historicalTotal = Object.values(originalDistribution).reduce((total, count) => total + count, 0);
-  const historicalScopeAligned = historicalTotal === GPMS_SCOPE.historicalAnomalies
-    && historicalDistribution.every((classification) => classification.count === classification.expectedCount)
-    && originalDistribution.P30 === 0 && originalDistribution.P50 === 0 && originalDistribution.P100 === 0;
+  const historicalTotal = Object.values(historicalDistribution).reduce((total, count) => total + count, 0);
+  const historicalPriorities = (Object.keys(COMPANY_PRIORITY_LABELS) as CompanyThermalPriority[]).filter(
+    (priority) => historicalDistribution[priority] > 0
+  );
 
   const situationCards = [
     { label: "Pontos críticos", value: ai.status === "READY" ? summary.counts.CRITICAL : "Indisponível", icon: Flame, tone: "text-status-critical", href: "/thermal-monitoring?risk=CRITICAL" },
@@ -107,15 +104,23 @@ export default async function ThermalMonitoringPage({ searchParams }: { searchPa
       now={now}
     />
 
-    {/* Referência inicial do desafio — separada dos KPIs em tempo real */}
-    <GpmsScopeSummary />
     {hasSyntheticData && <p className="rounded-md border p-3 text-sm"><strong>Dados sintéticos:</strong> as leituras identificadas como SIMULATOR são simulações persistidas no banco.</p>}
-    <Card className={historicalScopeAligned ? undefined : "border-status-attention"}>
-      <CardHeader><CardTitle>Inspeção original · {historicalTotal} de 19 achados</CardTitle></CardHeader>
+    <Card>
+      <CardHeader><CardTitle>Histórico de inspeções · {historicalTotal} achado{historicalTotal === 1 ? "" : "s"} registrado{historicalTotal === 1 ? "" : "s"}</CardTitle></CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-2">{historicalDistribution.map(({ sourceLabel, companyPriority, action, count }) => <Badge key={companyPriority}>{sourceLabel} / {companyPriority}: {count} · {action}</Badge>)}</div>
-        <p className="mt-2 text-xs text-muted-foreground">Classificação original preservada como evidência histórica. Ela não representa o risco atual calculado pela IA. P30/P50/P100 continuam sem significado inventado até validação formal da empresa.</p>
-        {!historicalScopeAligned && <p role="alert" className="mt-2 text-sm font-medium text-status-attention">A base histórica não corresponde à referência oficial de 2 P20, 10 P10 e 7 P5. Revise a carga da inspeção original.</p>}
+        {historicalTotal > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            {historicalPriorities.map((priority) => (
+              <div key={priority} className="flex items-center gap-1.5">
+                <CompanyPriorityBadge priority={priority} />
+                <span className="text-xs text-muted-foreground">× {historicalDistribution[priority]}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhuma inspeção histórica registrada ainda.</p>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">Classificação registrada em inspeção; não é o risco atual calculado pela IA.</p>
       </CardContent>
     </Card>
 
@@ -127,7 +132,7 @@ export default async function ThermalMonitoringPage({ searchParams }: { searchPa
       <AppliedFilterChips filters={searchParams} labels={{ sectors: toLabelMap(sectors), equipments: toLabelMap(equipments), panels: toLabelMap(panels), components: toLabelMap(components) }} />
       <div className="flex flex-wrap justify-between gap-2 text-sm">
         <p>{filtered.length} de {points.length} pontos</p>
-        <p className="text-muted-foreground">Inspeção original: {points.filter((p) => p.historicalPriority).length} achados auditáveis. Esse fato não indica o risco atual.</p>
+        <p className="text-muted-foreground">Achados históricos: {points.filter((p) => p.historicalPriority).length} pontos com evidência de inspeção. Esse fato não indica o risco atual.</p>
       </div>
       {!filtered.length && (
         <EmptyState

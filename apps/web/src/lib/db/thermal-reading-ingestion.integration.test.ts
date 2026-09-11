@@ -15,7 +15,7 @@ import { thermalReadingService } from "@/features/thermal-readings/services/ther
 // runId aleatório) e só apaga, no `afterAll`, exatamente os ids que ela
 // mesma criou. Nunca varre a tabela inteira, nunca usa `deleteMany()` sem
 // `where: { id: { in: [...] } }`, nunca roda `prisma migrate reset`, e nunca
-// toca no cenário determinístico da Etapa 2 (6.600 leituras / 55 pontos) nem
+// toca no cenário determinístico da Etapa 2 (13.200 leituras / 55 pontos) nem
 // nos dados de outra suíte.
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 

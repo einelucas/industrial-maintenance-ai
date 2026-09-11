@@ -9,8 +9,9 @@ import {
   type RunPlantDemoResult,
 } from "@/features/thermal-readings/services/thermal-reading-simulator.service";
 import { requirePermission } from "@/lib/auth/session";
-import { toActionErrorMessage } from "@/lib/errors";
+import { toActionErrorMessage, ValidationError } from "@/lib/errors";
 import { prisma } from "@/lib/db/client";
+import { FEATURE_FLAGS } from "@/config/feature-flags";
 
 export type RunThermalReadingSimulatorFormState = {
   error?: string;
@@ -24,6 +25,7 @@ export async function runPlantDemoAction(
   _formData: FormData
 ): Promise<RunPlantDemoFormState> {
   try {
+    if (!FEATURE_FLAGS.thermalSimulatorEnabled) throw new ValidationError("Simulador desabilitado neste ambiente.");
     const user = await requirePermission("thermal-reading:simulate");
     const result = await thermalReadingSimulatorService.runPlantDemo(new Date());
     await prisma.auditLog.create({
@@ -62,6 +64,7 @@ export async function runThermalReadingSimulatorAction(
   formData: FormData
 ): Promise<RunThermalReadingSimulatorFormState> {
   try {
+    if (!FEATURE_FLAGS.thermalSimulatorEnabled) throw new ValidationError("Simulador desabilitado neste ambiente.");
     const user = await requirePermission("thermal-reading:simulate");
 
     const raw = Object.fromEntries(formData.entries());

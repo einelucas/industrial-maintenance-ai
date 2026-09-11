@@ -24,7 +24,7 @@ const SCENARIO_LABEL: Record<(typeof SIMULATOR_SCENARIOS)[number], string> = {
   PROGRESSIVE_HEATING: "Aquecimento progressivo",
   OVERLOAD: "Sobrecarga",
   DEGRADED_CONNECTION: "Conexão degradada (telemetria)",
-  CRITICAL_75_6: "Crítico 75,6 °C (caso oficial)",
+  CRITICAL_75_6: "Crítico 75,6 °C (cenário de referência)",
   POST_MAINTENANCE_RECOVERY: "Recuperação após manutenção",
   SENSOR_OFFLINE: "Sensor offline",
   INVALID_SENSOR: "Sensor inválido (deve ser rejeitado)",
@@ -38,9 +38,9 @@ export function ThermalReadingSimulatorForm({ points }: { points: ThermalPoint[]
     <div className="space-y-6">
       <div className="space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-4">
         <div>
-          <h2 className="font-semibold">Cenário completo GPMS 2026</h2>
+          <h2 className="font-semibold">Cenário de demonstração completo</h2>
           <p className="text-sm text-muted-foreground">
-            Gera uma janela sincronizada dos 55 pontos, com sinais térmicos sintéticos de defeito em 19 deles, e envia as 55 leituras atuais ao modelo real. Nenhum risco ou resultado é pré-gravado.
+            Gera uma janela sincronizada para todos os pontos ativos, com sinais térmicos sintéticos de defeito em parte deles, e envia as leituras atuais ao modelo real. Nenhum risco ou resultado é pré-gravado.
           </p>
         </div>
         <form action={plantFormAction}>

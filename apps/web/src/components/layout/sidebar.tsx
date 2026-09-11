@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CalendarClock,
@@ -11,6 +12,8 @@ import {
   Factory,
   FileText,
   Gauge,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelsTopLeft,
   Radio,
   SlidersHorizontal,
@@ -20,6 +23,7 @@ import {
 import type { UserRole } from "@prisma/client";
 import { can, type Permission } from "@/lib/permissions/policies";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/config/brand";
 
 type NavigationItem = {
   href: string;
@@ -74,49 +78,104 @@ function isCurrentPath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavigationLink({ item, pathname, mobile = false }: { item: NavigationItem; pathname: string; mobile?: boolean }) {
+function NavigationLink({
+  item,
+  pathname,
+  mobile = false,
+  collapsed = false,
+}: {
+  item: NavigationItem;
+  pathname: string;
+  mobile?: boolean;
+  collapsed?: boolean;
+}) {
   const active = isCurrentPath(pathname, item.href);
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
+      title={collapsed ? item.label : undefined}
       className={cn(
         "flex items-center gap-3 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        mobile ? "px-3 py-3" : "px-3 py-2",
+        mobile ? "px-3 py-3" : collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
         active
           ? "bg-primary/10 font-medium text-primary"
           : "text-foreground/75 hover:bg-muted hover:text-foreground"
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>{item.label}</span>
+      <span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
     </Link>
   );
 }
 
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "megatherm.sidebar.collapsed";
+
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const sections = availableSections(role);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Lida com o valor salvo depois de montar (evita divergir do HTML
+  // renderizado no servidor, que não conhece a preferência do navegador).
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1");
+    } catch {
+      // localStorage indisponível (ex.: navegação privada) — mantém expandida.
+    }
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((previous) => {
+      const next = !previous;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Preferência só não persiste; a navegação continua funcionando.
+      }
+      return next;
+    });
+  }
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-border bg-card md:flex md:flex-col" aria-label="Navegação principal">
-      <div className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-[0.65rem] font-bold">
-          GPMS
-        </div>
-        <div className="min-w-0 leading-tight">
-          <span className="block truncate text-sm font-semibold">Manutenção Preditiva</span>
-          <span className="block text-[0.65rem] uppercase tracking-wide text-muted-foreground">Termografia e IA</span>
-        </div>
+    <aside
+      className={cn(
+        "hidden shrink-0 flex-col border-r border-border bg-card transition-[width] duration-200 md:flex",
+        collapsed ? "w-16" : "w-64"
+      )}
+      aria-label="Navegação principal"
+    >
+      <div className={cn("flex h-14 items-center border-b border-border", collapsed ? "justify-center px-2" : "justify-between px-4")}>
+        {!collapsed && (
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-[0.65rem] font-bold">
+              {BRAND.mark}
+            </div>
+            <div className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-semibold">{BRAND.name}</span>
+              <span className="block text-[0.65rem] uppercase tracking-wide text-muted-foreground">Manutenção preditiva</span>
+            </div>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" aria-hidden="true" /> : <PanelLeftClose className="h-4 w-4" aria-hidden="true" />}
+        </button>
       </div>
-      <nav className="flex-1 space-y-5 overflow-y-auto p-3">
+      <nav className={cn("flex-1 space-y-5 overflow-y-auto overflow-x-hidden p-3", collapsed && "px-2")}>
         {sections.map((section) => (
           <div key={section.label} className="space-y-1">
-            <p className="px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className={cn("px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground", collapsed && "sr-only")}>
               {section.label}
             </p>
             {section.items.map((item) => (
-              <NavigationLink key={item.href} item={item} pathname={pathname} />
+              <NavigationLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
             ))}
           </div>
         ))}
@@ -133,7 +192,7 @@ export function MobileNavigation({ role }: { role: UserRole }) {
   return (
     <details className="border-b bg-card px-4 py-3 md:hidden">
       <summary className="cursor-pointer text-sm font-medium">
-        Menu · {activeItem?.label ?? "GPMS 2026"}
+        Menu · {activeItem?.label ?? BRAND.shortName}
       </summary>
       <nav aria-label="Navegação mobile" className="space-y-4 pt-4">
         {sections.map((section) => (

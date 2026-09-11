@@ -89,7 +89,7 @@ export const thermalPointService = {
   },
 
   /**
-   * Inativa sem apagar leituras/histórico — as 6.600 leituras persistidas na
+   * Inativa sem apagar leituras/histórico — as 13.200 leituras persistidas na
    * Etapa 2 nunca são desconectadas ou removidas por esta ação.
    */
   async deactivate(id: string) {

@@ -8,14 +8,14 @@ export const DEMO_PRIORITY_DEFINITIONS = {
   P5: { action: "INTENSIFY_MONITORING", label: "Intensificar monitoramento", companyValidated: true },
   P10: { action: "PLANNED_SHUTDOWN", label: "Intervir em parada programada", companyValidated: true },
   P20: { action: "INTERVENE_WITHIN_30_DAYS", label: "Intervir em até 30 dias", companyValidated: true },
-  P30: { action: null, label: "Definição empresarial pendente", companyValidated: false },
-  P50: { action: null, label: "Definição empresarial pendente", companyValidated: false },
-  P100: { action: null, label: "Definição empresarial pendente", companyValidated: false },
+  P30: { action: null, label: "Política não configurada", companyValidated: false },
+  P50: { action: null, label: "Política não configurada", companyValidated: false },
+  P100: { action: null, label: "Política não configurada", companyValidated: false },
 } as const;
 
 // Mapeamento demonstrativo explícito, não alegado como política oficial da
-// empresa. Preserva o caso crítico informado (P20) e só utiliza níveis cujo
-// significado foi fornecido no desafio.
+// empresa. Só utiliza níveis cujo significado já foi validado pela
+// organização.
 export const DEMO_RISK_TO_COMPANY_PRIORITY: Record<RiskLevel, CompanyThermalPriority> = {
   LOW: "P5",
   MODERATE: "P10",

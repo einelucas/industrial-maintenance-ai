@@ -6,7 +6,7 @@
     "seriesSeed": 356194
   },
   "period": {
-    "startAt": "2026-08-29T07:00:00.000Z",
+    "startAt": "2026-08-29T06:30:00.000Z",
     "endAt": "2026-09-03T06:00:00.000Z",
     "sampleIntervalMinutes": 60
   },
@@ -27,73 +27,73 @@
       "note": "Fase de normalização pós-intervenção. NÃO foi persistida no banco pelo seed. Só deverá ser liberada/aplicada depois que uma OS futura para este ponto for concluída (Etapa 10), para não antecipar ao runtime que a manutenção já ocorreu.",
       "readings": [
         {
-          "measuredAt": "2026-09-03T07:00:00.000Z",
-          "temperatureMaxC": 55.5,
+          "measuredAt": "2026-09-03T06:30:00.000Z",
+          "temperatureMaxC": 54.9,
           "referenceTemperatureC": 40,
-          "deltaTC": 15.5
+          "deltaTC": 14.9
+        },
+        {
+          "measuredAt": "2026-09-03T07:00:00.000Z",
+          "temperatureMaxC": 49.4,
+          "referenceTemperatureC": 40,
+          "deltaTC": 9.4
+        },
+        {
+          "measuredAt": "2026-09-03T07:30:00.000Z",
+          "temperatureMaxC": 45.2,
+          "referenceTemperatureC": 40,
+          "deltaTC": 5.2
         },
         {
           "measuredAt": "2026-09-03T08:00:00.000Z",
-          "temperatureMaxC": 50,
+          "temperatureMaxC": 42.7,
           "referenceTemperatureC": 40,
-          "deltaTC": 10
+          "deltaTC": 2.7
+        },
+        {
+          "measuredAt": "2026-09-03T08:30:00.000Z",
+          "temperatureMaxC": 40.6,
+          "referenceTemperatureC": 40,
+          "deltaTC": 0.6
         },
         {
           "measuredAt": "2026-09-03T09:00:00.000Z",
-          "temperatureMaxC": 46.4,
+          "temperatureMaxC": 39.7,
           "referenceTemperatureC": 40,
-          "deltaTC": 6.4
+          "deltaTC": -0.3
+        },
+        {
+          "measuredAt": "2026-09-03T09:30:00.000Z",
+          "temperatureMaxC": 37.4,
+          "referenceTemperatureC": 40,
+          "deltaTC": -2.6
         },
         {
           "measuredAt": "2026-09-03T10:00:00.000Z",
-          "temperatureMaxC": 44,
+          "temperatureMaxC": 37.6,
           "referenceTemperatureC": 40,
-          "deltaTC": 4
+          "deltaTC": -2.4
+        },
+        {
+          "measuredAt": "2026-09-03T10:30:00.000Z",
+          "temperatureMaxC": 36.3,
+          "referenceTemperatureC": 40,
+          "deltaTC": -3.7
         },
         {
           "measuredAt": "2026-09-03T11:00:00.000Z",
-          "temperatureMaxC": 42.5,
+          "temperatureMaxC": 38,
           "referenceTemperatureC": 40,
-          "deltaTC": 2.5
+          "deltaTC": -2
+        },
+        {
+          "measuredAt": "2026-09-03T11:30:00.000Z",
+          "temperatureMaxC": 37,
+          "referenceTemperatureC": 40,
+          "deltaTC": -3
         },
         {
           "measuredAt": "2026-09-03T12:00:00.000Z",
-          "temperatureMaxC": 41.4,
-          "referenceTemperatureC": 40,
-          "deltaTC": 1.4
-        },
-        {
-          "measuredAt": "2026-09-03T13:00:00.000Z",
-          "temperatureMaxC": 39.6,
-          "referenceTemperatureC": 40,
-          "deltaTC": -0.4
-        },
-        {
-          "measuredAt": "2026-09-03T14:00:00.000Z",
-          "temperatureMaxC": 39.4,
-          "referenceTemperatureC": 40,
-          "deltaTC": -0.6
-        },
-        {
-          "measuredAt": "2026-09-03T15:00:00.000Z",
-          "temperatureMaxC": 38.1,
-          "referenceTemperatureC": 40,
-          "deltaTC": -1.9
-        },
-        {
-          "measuredAt": "2026-09-03T16:00:00.000Z",
-          "temperatureMaxC": 39.1,
-          "referenceTemperatureC": 40,
-          "deltaTC": -0.9
-        },
-        {
-          "measuredAt": "2026-09-03T17:00:00.000Z",
-          "temperatureMaxC": 37.9,
-          "referenceTemperatureC": 40,
-          "deltaTC": -2.1
-        },
-        {
-          "measuredAt": "2026-09-03T18:00:00.000Z",
           "temperatureMaxC": 36.4,
           "referenceTemperatureC": 40,
           "deltaTC": -3.6

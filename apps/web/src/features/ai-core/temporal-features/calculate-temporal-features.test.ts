@@ -39,7 +39,11 @@ describe("calculateTemporalFeatures — janelas 5/15/60 min", () => {
   });
 
   it("séries irregulares (amostragem horária): janelas curtas ficam com sampleCount 1, nunca inventam amostra", () => {
-    // Simula o espaçamento real da Etapa 2 (60 min entre leituras).
+    // Cobertura de borda: séries com amostragem horária (mais grossa que a
+    // janela de 5/15 min) nunca podem alimentar essas janelas curtas com
+    // mais de 1 amostra — e, se toda a série fosse assim (ver
+    // SAMPLE_INTERVAL_MINUTES em thermal-series.ts), a janela de 60 min/
+    // tendência também travaria em 1 amostra por causa da borda exclusiva.
     const current = reading(0, 55.2);
     const priorReadings = [reading(60, 55.7), reading(120, 55.2), reading(180, 56.3)];
     const result = calculateTemporalFeatures({ current, priorReadings, attentionThresholdC: null });

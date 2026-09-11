@@ -1,6 +1,6 @@
-# Plano de implementação por etapas — GPMS 2026: manutenção preditiva termográfica
+# Adequações e pendências — MegaTherm AI
 
-> Documento técnico de evolução do projeto **Industrial Maintenance Intelligence**.
+> **Fonte única de controle do projeto.** Este arquivo reúne plano de implementação, pendências, bloqueadores, critérios de aceite, evidências e histórico técnico do **MegaTherm AI**.
 >
 > Repositório analisado: `einelucas/industrial-maintenance-ai`, branch `main`.
 >
@@ -14,7 +14,7 @@
 
 ---
 
-# Parte I — Roteiro de execução
+# Parte I — Painel de controle e roteiro de execução
 
 Esta parte transforma a especificação técnica em uma sequência prática de trabalho. As etapas devem ser executadas na ordem apresentada porque cada uma deixa o projeto em um estado verificável e prepara as dependências da seguinte.
 
@@ -60,9 +60,84 @@ Regras determinísticas continuam permitidas apenas para validação de entrada,
 
 ### Próxima ação recomendada
 
-Prosseguir pela **Etapa 10 — termogramas, relatórios e feedback**. A Etapa 9 encerrou a compatibilidade estrutural P5–P100, a inspeção original auditável e o canal contínuo autenticado. O próximo incremento deverá armazenar a imagem térmica privada e completar a linha do tempo auditável por TAG.
+Executar primeiro o **fechamento funcional das jornadas de planejamento e OS**, registrado na revisão de 10/09/2026 abaixo, e então prosseguir pela **Etapa 10 — termogramas, relatórios e feedback**. A Etapa 9 encerrou a compatibilidade estrutural P5–P100, a inspeção original auditável e o canal contínuo autenticado, mas a varredura do produto encontrou funções já modeladas que ainda não possuem um caminho operacional completo na interface.
 
 As Etapas 1–9 já entregam a demonstração sintética AI-first, a inspeção histórica 2/10/7, a escala P5–P100 sem definições inventadas e o canal contínuo com fila durável. Isso comprova o fluxo de software e o contrato de telemetria, mas ainda **não** comprova segurança da instalação física, eficácia industrial, termogramas privados completos ou desempenho sustentado no deployment.
+
+### Revisão funcional para a versão profissional — 10/09/2026
+
+Esta revisão complementa as Etapas 10–11 e deve ser concluída antes de considerar o produto pronto para operação profissional. Ela não autoriza criar diagnósticos fora da IA, permitir OS preditiva manual ou ampliar o escopo para funções sem relação com monitoramento térmico e manutenção.
+
+#### P0 — Cronograma e planejamento de OS
+
+- [ ] Transformar `/schedule` em uma visão operacional: manter filtros e Gantt/calendário, tornar cada OS acessível e oferecer ação de planejar/replanejar conforme permissão.
+- [ ] Exibir separadamente as OS sem agenda. Hoje o repositório do cronograma exige `scheduledStart` e `scheduledEnd`, portanto essas OS desaparecem da tela.
+- [ ] Criar edição de planejamento para uma OS existente com responsável, início, fim, duração/horas estimadas, prioridade e observações, registrando histórico e auditoria.
+- [ ] Validar no servidor: início e fim válidos, fim posterior ao início, regra para campos parciais, fuso horário explícito e responsável ativo com perfil compatível.
+- [ ] Revalidar `/schedule` após criar, editar, planejar, replanejar, gerar ou alterar o status de uma OS.
+- [ ] Garantir que mover uma OS para `PLANNED` exija agenda válida e que iniciar uma OS exija responsável, salvo exceção autorizada e auditada.
+- [ ] Adicionar testes unitários, de integração e E2E para consulta, filtros, planejamento, reagendamento, conflito de datas e permissões.
+
+#### P0 — Origem das OS e integração com o cronograma
+
+- [ ] Tornar a rota `/work-orders/new` alcançável pela interface para perfis com `workorder:manage`, sem expor o tipo `PREDICTIVE` no formulário genérico.
+- [ ] Ampliar a criação de OS preditiva por incidente para coletar responsável, prioridade da OS, início, fim e horas estimadas. A action atual lê parcialmente prioridade/responsável sem que o formulário os apresente e ignora agendamento; o service aceita somente `scheduledStart`.
+- [ ] Fazer OS geradas por plano preventivo receberem agenda coerente a partir de `nextExecution` e da duração configurada, ou entrarem explicitamente em uma fila “A planejar”. Hoje são criadas sem datas e não aparecem no cronograma.
+- [ ] Tornar a geração manual de OS por plano idempotente ou protegida contra clique repetido, atualizar `nextExecution` de forma transacional e mostrar o resultado ao usuário.
+- [ ] Manter a invariante: OS preditiva nasce somente de incidente com evidência rastreável e confirmação humana.
+
+#### P0 — Execução e encerramento da OS
+
+- [ ] Implementar atualização dos itens de checklist da OS, com autoria e horário por item.
+- [ ] Permitir registrar `actualHours`, `solution` e observações operacionais. Esses campos existem no banco/PDF, mas não possuem fluxo de preenchimento na interface.
+- [ ] Exibir checklist, horas estimadas/reais, solução e observações no detalhe da OS.
+- [ ] Incluir campo de observação/justificativa nas transições de status; a action aceita `notes`, mas a interface nunca o envia.
+- [ ] Definir requisitos de conclusão: solução, horas reais e checklist concluído, com eventual exceção justificada e auditada.
+- [ ] Mostrar ações de status apenas para quem pode executá-las; hoje a tela pode oferecer botões que somente falham depois no servidor.
+- [ ] Completar a auditoria de criação, planejamento, alteração, execução e encerramento de OS.
+
+#### P1 — Navegação e funções sem caminho claro
+
+- [ ] Expor “Planos preventivos” na navegação de planejamento ou incorporá-los ao cronograma. As rotas existem, mas não há item no menu principal.
+- [ ] Decidir e documentar o destino das rotas de compatibilidade `/dashboard`, `/alerts`, `/predictive-maintenance` e `/settings`; evitar breadcrumbs que levem a páginas que apenas redirecionam.
+- [ ] Implementar o relatório térmico profissional ou remover o cartão/endpoint indisponível. `/api/reports/predictive` responde `503`, enquanto ainda existe um PDF mecânico legado não utilizado.
+- [ ] Remover, arquivar ou isolar código legado sem entrada ativa (`sensor-readings`, ações antigas de alerta e `runThermalSyncAction`) depois de confirmar que nenhuma integração externa o consome.
+- [ ] Manter simuladores e dados sintéticos fora da navegação de produção, habilitados somente por configuração explícita de ambiente.
+
+#### P1 — Robustez, feedback e consistência
+
+- [ ] Validar query strings antes de convertê-las para enums Prisma; filtros inválidos não podem causar erro 500.
+- [ ] Aplicar autorização também na apresentação das páginas e ações, não apenas depois do envio do formulário.
+- [ ] Adicionar estados de carregamento, sucesso e erro às ações “Executar verificação agora” e “Gerar OS”.
+- [ ] Traduzir enums técnicos exibidos diretamente e padronizar rótulos, datas, horários e fusos.
+- [ ] Substituir vazios sem orientação por estados com explicação e próxima ação adequada ao perfil.
+- [ ] Revisar foco, teclado, leitura por tecnologia assistiva, contraste, reflow e comportamento mobile das jornadas prioritárias.
+
+#### Bloqueadores transversais de produção e operação
+
+- [ ] Trocar `AUTH_SECRET`, `AI_SERVICE_API_KEY`, `CRON_SECRET` e credenciais de dispositivos por valores fortes e únicos no ambiente de produção.
+- [ ] Configurar `NEXTAUTH_URL`, URLs/bindings internos e CORS estritamente para os domínios implantados.
+- [ ] Aplicar rate limiting no login, telemetria, upload e FastAPI.
+- [ ] Validar tamanho máximo de payload e arquivo no servidor.
+- [ ] Completar a auditoria de OS, incidentes, revisões, dispositivos, importações e termogramas.
+- [ ] Configurar CI para lint, typecheck, testes web, testes FastAPI, migrations e verificação do modelo.
+- [ ] Configurar logs estruturados, métricas e alertas de uptime, backlog e falha de inferência.
+- [ ] Validar pooling do Prisma, backup/restore do banco, retenção e rollback de migrations.
+- [ ] Documentar o procedimento Neon sem tratar `db push` como substituto informal de migration em produção.
+- [ ] Executar o verificador de prontidão e o roteiro E2E antes de cada deploy relevante.
+
+#### Evidências e limites desta revisão
+
+- [x] Aplicação web respondeu HTTP 200 em `/login`.
+- [x] FastAPI respondeu saudável, com modelo térmico carregado.
+- [x] Typecheck executado sem erros com o TypeScript instalado no projeto.
+- [x] Suíte unitária executada: 47 arquivos aprovados e 6 suites de integração externa ignoradas; 371 testes aprovados e 47 ignorados.
+- [!] A inspeção visual autenticada não foi executada porque nenhum navegador controlável estava disponível nesta sessão. As jornadas acima ainda exigem E2E em navegador com perfis ADMIN/PLANNER/TECHNICIAN/MANAGER.
+- [!] O comando via `pnpm` foi bloqueado pela validação local de assinatura/registro do gerenciador; typecheck e testes foram executados diretamente pelos binários já instalados.
+
+Prompt de execução: `docs/prompts/fechamento-funcional-megatherm-ai.md`.
+
+As demais pendências de termogramas, relatórios, qualidade, segurança e piloto estão consolidadas nas Etapas 10–12 e nos critérios de aceite deste mesmo arquivo. Não manter checklist paralelo.
 
 ### O que não deve ser feito agora
 
@@ -77,6 +152,13 @@ As Etapas 1–9 já entregam a demonstração sintética AI-first, a inspeção 
 - não implementar `DemoPredictor`, `ThermalRulePredictor` ou `RULE_ONLY` como alternativa operacional;
 - não pré-popular `Prediction`, incidente, alerta ou OS preditiva para simular que a IA funcionou;
 - não permitir selecionar manualmente o tipo `PREDICTIVE` no formulário genérico de OS.
+- não evoluir o fluxo mecânico legado `FailureEvent` ou o retreino por falhas mecânicas como requisito do produto térmico;
+- não tornar MQTT obrigatório nem acoplar o domínio a um broker ou fabricante específico;
+- não implementar notificações externas antes de a empresa definir canal, responsável e escalonamento;
+- não fazer otimizações de cache, índice, agregação ou bundle sem medição de gargalo;
+- não polir módulos genéricos de PCM que não participem da cadeia térmica;
+- não promover ou retreinar modelos automaticamente sem validação humana e critérios comparativos;
+- não permitir que a IA autorize manutenção, desligamento ou intervenção física.
 
 ---
 
@@ -134,7 +216,6 @@ Nenhuma.
 
 - `README.md`;
 - `docs/architecture.md`;
-- `docs/checklist-pendencias.md`;
 - `docs/ADEQUACAO_GPMS2026_TERMOGRAFIA.md`;
 - `.env.example` de cada aplicação;
 - configuração Git/GitHub do repositório.
@@ -1734,7 +1815,7 @@ As seguintes decisões orientam toda a implementação:
 
 ## 3. Diagnóstico inicial do repositório — registro histórico
 
-> Esta seção descreve a linha de base encontrada em 02/09/2026 e explica por que as Etapas 1–8 foram necessárias. Ela não é uma lista de trabalho atual. Para novas implementações, usar as Etapas 9–12 e `docs/checklist-pendencias.md`; não recriar correções já concluídas.
+> Esta seção descreve a linha de base encontrada em 02/09/2026 e explica por que as Etapas 1–8 foram necessárias. Ela não é uma lista de trabalho atual. Para novas implementações, usar o painel de controle no início deste arquivo e as Etapas 9–12; não recriar correções já concluídas.
 
 ### 3.1. Componentes que devem ser preservados
 
@@ -3558,7 +3639,7 @@ Simular pelo menos:
 | `docker-compose.yml`                                    | Incluir gateway/broker somente se a decisão de infraestrutura do piloto exigir; MQTT não é requisito funcional |
 | `docs/architecture.md`                                  | Atualizar arquitetura e fluxo                                             |
 | `docs/predictive-maintenance.md`                        | Substituir pelo fluxo termográfico                                        |
-| `docs/checklist-pendencias.md`                          | Separar débitos legados dos requisitos GPMS 2026                          |
+| `Adequaçoes.md`                                        | Manter a fonte única de adequações, pendências, evidências e critérios     |
 
 ---
 
@@ -3598,7 +3679,7 @@ Segredos não devem ser incluídos nos arquivos `.env.example` além de placehol
 
 ## 22. Checklist consolidado por etapa — fonte oficial
 
-> Esta seção substitui o checklist legado por fases. O detalhamento executável fica em `docs/checklist-pendencias.md`; em caso de divergência, prevalecem a revisão contratual de 09/09/2026 e as Etapas 9–12 deste documento.
+> Esta seção consolida o checklist por fases. O detalhamento executável e os bloqueadores ficam neste mesmo arquivo; em caso de divergência entre registros históricos, prevalecem o painel de controle mais recente e as Etapas 9–12.
 
 ### Etapas encerradas
 
@@ -3722,6 +3803,45 @@ O piloto deverá acompanhar:
 Cada indicador deverá ter fórmula, fonte, baseline, meta, período de apuração e responsável aprovados. A meta de interrupções não planejadas causadas pela implantação é obrigatoriamente zero.
 
 Evitar afirmar “incêndios evitados” sem evidência causal documentada.
+
+---
+
+## 24-A. Catálogo IoT comercial e integração de campo
+
+Pesquisa técnica revisada em 10/09/2026, usando documentação oficial dos fabricantes. Os modelos abaixo existem no mercado, mas o cadastro demonstrativo não comprova que tenham sido adquiridos ou instalados na planta.
+
+### Arquitetura proposta para os 55 pontos atuais
+
+| Aplicação cadastrada | Quantidade | Sensor comercial de referência | Firmware de referência | Gateway |
+| --- | ---: | --- | --- | --- |
+| Disjuntores, contatores e relés térmicos de 32–63 A | 49 | Schneider Electric PowerLogic Thermal Tag SPTH150S | 001.004.001 | Dois EcoStruxure Panel Server PAS800; firmware mínimo 002.003.000 |
+| Disjuntores, barramentos e terminais de 100–400 A | 6 | Schneider Electric PowerLogic TH110, referência EMS59440 | 002.000.000, hardware EFR32 | PAS800-B; firmware mínimo 002.006.000 |
+
+O TH110 é um sensor de contato sem fio e sem bateria, destinado à temperatura de conexões, cabos e barramentos energizados. A comunicação é Zigbee Green Power/IEEE 802.15.4. A documentação do fabricante informa precisão de ±1 °C entre −25 e +80 °C e ±2 °C fora dessa faixa; o limite de medição depende da temperatura ambiente e chega a +125 °C a 40 °C ambiente, com +150 °C apenas por tempo limitado.
+
+O SPTH150S é um sensor térmico sem fio autoalimentado. As notas oficiais do Panel Server confirmam a referência comercial, o firmware de sensor 001.004.001 e a compatibilidade a partir do firmware 002.003.000 do gateway. Faixa e precisão devem ser confirmadas na ficha técnica correspondente ao lote adquirido; o app não deve deduzi-las apenas pelo nome “150”.
+
+O PAS800 concentra sensores IEEE 802.15.4 e disponibiliza rede Ethernet, Modbus TCP/IP e HTTPS. Como a documentação recomenda até 40 dispositivos numa configuração sem fio mista, a proposta usa dois gateways: `PAS800-A` para TP-001–TP-028 (esterilização, secagem e câmara fria) e `PAS800-B` para TP-029–TP-055 (centrifugação e utilidades). Cada unidade fica abaixo do limite recomendado. O fluxo proposto é `sensor → PAS800 → conector edge → API de telemetria do MegaTherm AI`; o sensor não chama diretamente a API da aplicação.
+
+Fontes oficiais:
+
+- [PowerLogic TH110 — manual do fabricante](https://www.se.com/uk/en/download/document/NVE62740/)
+- [Sensores compatíveis e versões mínimas de firmware do Panel Server](https://productinfo.se.com/ecostruxurepanelserverrn/doca0178-ecostruxure-panel-server-release-notes/Portuguese/DOCA0178%20EcoStruxure%20Panel%20Server%20Release%20Notes_pt_0000853254.xml/$/RN_EcoStruxurePanelServerPAS800_Wireless_Devices_pt_0000935611)
+- [Características técnicas e protocolos do EcoStruxure Panel Server](https://productinfo.se.com/ecostruxurepanelserverguide/doca0172-ecostruxure-panel-server-user-guide/Portuguese/DOCA0172%20EcoStruxure%20Panel%20Server%20Universal%20User%20Guide_pt_0000812846.xml/$/TPC_PanelServerTechnicalCharacteris-3453057E)
+- [Dispositivos suportados e capacidade do sistema Panel Server](https://productinfo.se.com/ecostruxurepanelserverguide/doca0172-ecostruxure-panel-server-user-guide/English/DOCA0172%20EcoStruxure%20Panel%20Server%20Universal%20User%20Guide_0000492433.xml/$/TPC_PanelServerArchitecture-3452D5CF)
+- [Linha EcoStruxure Panel Server no site brasileiro](https://www.se.com/br/pt/product-range/40739468-ecostruxure-panel-server/)
+
+### Decisões e pendências
+
+- [x] Substituir fabricante/modelo genéricos dos 55 registros demonstrativos por referências comerciais reais.
+- [x] Exibir tipo, grandeza, comunicação, alimentação, faixa, precisão, gateway, firmware mínimo e fontes oficiais no detalhe do dispositivo.
+- [x] Manter `SIM-TP-*`, estado e telemetria identificados como simulados; não inventar número de série ou instalação física.
+- [x] Não associar o Banner QM30VT2 aos pontos atuais das centrífugas: ele é adequado a vibração/temperatura de máquina rotativa, enquanto o cadastro atual mede relés térmicos dos CCMs.
+- [ ] Confirmar disponibilidade, preço, homologação e suporte local das referências com fornecedor autorizado no Brasil.
+- [ ] Validar mecanicamente cada fixação e eletricamente corrente mínima, isolamento, temperatura ambiente, cobertura RF e quantidade/posição dos gateways.
+- [ ] Aprovar instalação e comissionamento conforme NR-10 e procedimentos internos da planta.
+- [ ] Implementar e testar o conector edge PAS800 → MegaTherm AI, incluindo buffer offline, sincronização de relógio, idempotência e mapeamento de canais para TAGs.
+- [ ] Após instalação, substituir `SIM-TP-*`, firmware de referência e estados simulados pelos valores lidos das etiquetas e dos equipamentos reais.
 
 ---
 
